@@ -1,0 +1,15 @@
+{
+  "itemGroup.frogterminal": "Create: Frog Terminal",
+  "block.frogterminal.advanced_stressometer": "Advanced Stressometer",
+
+  "frogterminal.configuration.title": "Stress View Configs",
+  "frogterminal.configuration.section.frogterminal.common.toml": "Stress View Configs",
+  "frogterminal.configuration.section.frogterminal.common.toml.title": "Stress View Configs",
+  "frogterminal.configuration.items": "Item List",
+  "frogterminal.configuration.logDirtBlock": "Log Dirt Block",
+  "frogterminal.configuration.magicNumberIntroduction": "Magic Number Text",
+  "frogterminal.configuration.magicNumber": "Magic Number",
+
+  "frogterminal.gui.stressometer.producing": "Producing",
+  "frogterminal.gui.stressometer.consuming": "Consuming"
+}

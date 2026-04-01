@@ -1,0 +1,32 @@
+{
+	"credit": "Made with Blockbench",
+	"textures": {
+		"1": "create:block/gauge",
+		"2": "frogterminal:block/faces_frown"
+	},
+	"elements": [
+		{
+			"name": "Gauge",
+			"from": [16.075, 4, 4],
+			"to": [16.075, 12, 12],
+			"rotation": {"angle": 0, "axis": "y", "origin": [9, 8, 8]},
+			"faces": {
+				"east": {"uv": [0, 0, 16, 16], "texture": "#2"}
+			}
+		},
+		{
+			"name": "GuageMetalBack",
+			"from": [14, 3, 3],
+			"to": [16, 13, 13],
+			"rotation": {"angle": 0, "axis": "y", "origin": [9, 8, 8]},
+			"faces": {
+				"north": {"uv": [14, 5, 13, 10], "texture": "#1"},
+				"east": {"uv": [9, 5, 14, 10], "texture": "#1"},
+				"south": {"uv": [10, 5, 9, 10], "texture": "#1"},
+				"west": {"uv": [9, 5, 14, 10], "texture": "#1"},
+				"up": {"uv": [14, 5, 9, 6], "rotation": 90, "texture": "#1"},
+				"down": {"uv": [9, 10, 14, 9], "rotation": 90, "texture": "#1"}
+			}
+		}
+	]
+}

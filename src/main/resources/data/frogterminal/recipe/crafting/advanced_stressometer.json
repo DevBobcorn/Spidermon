@@ -1,0 +1,19 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "misc",
+  "key": {
+    "A": {
+      "item": "create:stressometer"
+    },
+    "C": {
+      "item": "create:display_board"
+    }
+  },
+  "pattern": [
+    "CAC"
+  ],
+  "result": {
+    "count": 1,
+    "id": "frogterminal:advanced_stressometer"
+  }
+}

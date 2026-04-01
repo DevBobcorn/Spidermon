@@ -1,0 +1,15 @@
+{
+  "itemGroup.frogterminal": "机械动力：青蛙终端",
+  "block.frogterminal.advanced_stressometer": "应力表（高级）",
+
+  "frogterminal.configuration.title": "负载显示配置",
+  "frogterminal.configuration.section.frogterminal.common.toml": "Example Mod Configs",
+  "frogterminal.configuration.section.frogterminal.common.toml.title": "Example Mod Configs",
+  "frogterminal.configuration.items": "Item List",
+  "frogterminal.configuration.logDirtBlock": "Log Dirt Block",
+  "frogterminal.configuration.magicNumberIntroduction": "Magic Number Text",
+  "frogterminal.configuration.magicNumber": "Magic Number",
+
+  "frogterminal.gui.stressometer.producing": "产出",
+  "frogterminal.gui.stressometer.consuming": "消耗"
+}
