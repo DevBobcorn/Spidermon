@@ -8,8 +8,14 @@ import com.mojang.logging.LogUtils;
 
 import io.devbobcorn.frogterminal.block.AdvancedStressometerBlock;
 import io.devbobcorn.frogterminal.block.AdvancedStressometerBlockEntity;
+import io.devbobcorn.frogterminal.block.FrogTerminalBlock;
+import io.devbobcorn.frogterminal.block.FrogTerminalBlockEntity;
+import io.devbobcorn.frogterminal.block.FrogTerminalItem;
+import io.devbobcorn.frogterminal.block.FrogTerminalMenu;
+import io.devbobcorn.frogterminal.network.FrogTerminalPlacementPacket;
 
 import net.minecraft.core.registries.Registries;
+import net.minecraft.world.inventory.MenuType;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.item.BlockItem;
 import net.minecraft.world.item.CreativeModeTab;
@@ -27,6 +33,9 @@ import net.neoforged.fml.event.lifecycle.FMLCommonSetupEvent;
 import net.neoforged.neoforge.common.NeoForge;
 import net.neoforged.neoforge.event.BuildCreativeModeTabContentsEvent;
 import net.neoforged.neoforge.event.server.ServerStartingEvent;
+import net.neoforged.neoforge.network.event.RegisterPayloadHandlersEvent;
+import net.neoforged.neoforge.network.registration.PayloadRegistrar;
+import net.neoforged.neoforge.common.extensions.IMenuTypeExtension;
 import net.neoforged.neoforge.registries.DeferredBlock;
 import net.neoforged.neoforge.registries.DeferredHolder;
 import net.neoforged.neoforge.registries.DeferredItem;
@@ -45,6 +54,8 @@ public class FrogTerminalMod {
             DeferredRegister.create(Registries.BLOCK_ENTITY_TYPE, MODID);
     public static final DeferredRegister<CreativeModeTab> CREATIVE_MODE_TABS =
             DeferredRegister.create(Registries.CREATIVE_MODE_TAB, MODID);
+    public static final DeferredRegister<MenuType<?>> MENU_TYPES =
+            DeferredRegister.create(Registries.MENU, MODID);
 
     // Advanced Stressometer — block, item, and block entity
     public static final DeferredBlock<AdvancedStressometerBlock> ADVANCED_STRESSOMETER_BLOCK =
@@ -67,13 +78,38 @@ public class FrogTerminalMod {
                                     FrogTerminalMod.ADVANCED_STRESSOMETER_BE.get(), pos, state),
                             ADVANCED_STRESSOMETER_BLOCK.get()).build(null));
 
+    // Frog Terminal — block, item, and block entity
+    public static final DeferredBlock<FrogTerminalBlock> FROG_TERMINAL_BLOCK =
+            BLOCKS.register("frog_terminal",
+                    () -> new FrogTerminalBlock(BlockBehaviour.Properties.of()
+                            .mapColor(MapColor.COLOR_BLUE)
+                            .strength(3.0F)
+                            .sound(SoundType.NETHERITE_BLOCK)
+                            .noOcclusion()));
+
+    public static final DeferredItem<FrogTerminalItem> FROG_TERMINAL_ITEM =
+            ITEMS.registerItem("frog_terminal",
+                    props -> new FrogTerminalItem(FROG_TERMINAL_BLOCK.get(), props));
+
+    public static final DeferredHolder<MenuType<?>, MenuType<FrogTerminalMenu>> FROG_TERMINAL_MENU =
+            MENU_TYPES.register("frog_terminal",
+                    () -> IMenuTypeExtension.create(FrogTerminalMenu::new));
+
+    public static final Supplier<BlockEntityType<FrogTerminalBlockEntity>> FROG_TERMINAL_BE =
+            BLOCK_ENTITY_TYPES.register("frog_terminal",
+                    () -> BlockEntityType.Builder.of(
+                            (pos, state) -> new FrogTerminalBlockEntity(
+                                    FrogTerminalMod.FROG_TERMINAL_BE.get(), pos, state),
+                            FROG_TERMINAL_BLOCK.get()).build(null));
+
     // Creates a creative tab with the id "frogterminal:example_tab" for the example item, that is placed after the combat tab
     public static final DeferredHolder<CreativeModeTab, CreativeModeTab> EXAMPLE_TAB = CREATIVE_MODE_TABS.register("example_tab", () -> CreativeModeTab.builder()
             .title(Component.translatable("itemGroup.frogterminal")) //The language key for the title of your CreativeModeTab
             .withTabsBefore(CreativeModeTabs.COMBAT)
             .icon(() -> ADVANCED_STRESSOMETER_ITEM.get().getDefaultInstance())
             .displayItems((parameters, output) -> {
-                output.accept(ADVANCED_STRESSOMETER_ITEM.get()); // Add the Advanced Stressometer item to the tab. For your own tabs, this method is preferred over the event
+                output.accept(ADVANCED_STRESSOMETER_ITEM.get());
+                output.accept(FROG_TERMINAL_ITEM.get());
             }).build());
 
     // The constructor for the mod class is the first code that is run when your mod is loaded.
@@ -81,10 +117,12 @@ public class FrogTerminalMod {
     public FrogTerminalMod(IEventBus modEventBus, ModContainer modContainer) {
         // Register the commonSetup method for modloading
         modEventBus.addListener(this::commonSetup);
+        modEventBus.addListener(FrogTerminalMod::registerPayloads);
 
         BLOCKS.register(modEventBus);
         ITEMS.register(modEventBus);
         BLOCK_ENTITY_TYPES.register(modEventBus);
+        MENU_TYPES.register(modEventBus);
         CREATIVE_MODE_TABS.register(modEventBus);
 
         // Register ourselves for server and other game events we are interested in.
@@ -99,7 +137,14 @@ public class FrogTerminalMod {
     private void commonSetup(FMLCommonSetupEvent event) {
         // Some common setup code
         LOGGER.info("HELLO FROM COMMON SETUP");
+    }
 
+    private static void registerPayloads(RegisterPayloadHandlersEvent event) {
+        PayloadRegistrar registrar = event.registrar(MODID);
+        registrar.playToServer(FrogTerminalPlacementPacket.TYPE,
+            FrogTerminalPlacementPacket.STREAM_CODEC, FrogTerminalPlacementPacket::handle);
+        registrar.playToClient(FrogTerminalPlacementPacket.ClientBoundRequest.TYPE,
+            FrogTerminalPlacementPacket.ClientBoundRequest.STREAM_CODEC, FrogTerminalPlacementPacket.ClientBoundRequest::handle);
     }
 
     private void addCreative(BuildCreativeModeTabContentsEvent event) {

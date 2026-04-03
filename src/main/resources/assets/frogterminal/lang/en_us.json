@@ -1,6 +1,7 @@
 {
   "itemGroup.frogterminal": "Create: Frog Terminal",
   "block.frogterminal.advanced_stressometer": "Advanced Stressometer",
+  "block.frogterminal.frog_terminal": "Frog Terminal",
 
   "frogterminal.configuration.title": "Stress View Configs",
   "frogterminal.configuration.section.frogterminal.common.toml": "Stress View Configs",
@@ -11,5 +12,14 @@
   "frogterminal.configuration.magicNumber": "Magic Number",
 
   "frogterminal.gui.stressometer.producing": "Producing",
-  "frogterminal.gui.stressometer.consuming": "Consuming"
+  "frogterminal.gui.stressometer.consuming": "Consuming",
+
+  "frogterminal.frog_terminal.valid": "Valid Placement",
+  "frogterminal.frog_terminal.too_far": "Too Far Away",
+  "frogterminal.frog_terminal.cannot_reach_down": "Cannot Reach Downward",
+  "frogterminal.frog_terminal.not_targeting_anything": "Not Targeting Anything",
+
+  "frogterminal.screen.chain_point": "Chain Point Location",
+  "frogterminal.screen.no_target": "No Target Set",
+  "frogterminal.screen.target_unavailable": "Target Unavailable"
 }

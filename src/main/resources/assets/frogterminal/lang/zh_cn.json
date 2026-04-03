@@ -1,6 +1,7 @@
 {
   "itemGroup.frogterminal": "机械动力：青蛙终端",
   "block.frogterminal.advanced_stressometer": "应力表（高级）",
+  "block.frogterminal.frog_terminal": "青蛙终端",
 
   "frogterminal.configuration.title": "负载显示配置",
   "frogterminal.configuration.section.frogterminal.common.toml": "Example Mod Configs",
@@ -11,5 +12,14 @@
   "frogterminal.configuration.magicNumber": "Magic Number",
 
   "frogterminal.gui.stressometer.producing": "产出",
-  "frogterminal.gui.stressometer.consuming": "消耗"
+  "frogterminal.gui.stressometer.consuming": "消耗",
+
+  "frogterminal.frog_terminal.valid": "放置有效",
+  "frogterminal.frog_terminal.too_far": "距离过远",
+  "frogterminal.frog_terminal.cannot_reach_down": "无法向下连接",
+  "frogterminal.frog_terminal.not_targeting_anything": "未瞄准任何目标",
+
+  "frogterminal.screen.chain_point": "链式传送带连接点位置",
+  "frogterminal.screen.no_target": "未设置目标",
+  "frogterminal.screen.target_unavailable": "目标不可用"
 }

@@ -1,0 +1,7 @@
+{
+  "variants": {
+    "": {
+      "model": "frogterminal:block/frog_terminal/block"
+    }
+  }
+}
