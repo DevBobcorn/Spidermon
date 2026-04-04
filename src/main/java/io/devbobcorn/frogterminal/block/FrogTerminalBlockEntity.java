@@ -3,11 +3,14 @@ package io.devbobcorn.frogterminal.block;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 import com.simibubi.create.AllItems;
 import com.simibubi.create.content.kinetics.chainConveyor.ChainConveyorBlockEntity;
+import com.simibubi.create.content.kinetics.chainConveyor.ChainConveyorBlockEntity.ConnectedPort;
 import com.simibubi.create.content.logistics.packagePort.PackagePortTarget;
 import com.simibubi.create.foundation.blockEntity.SmartBlockEntity;
 import com.simibubi.create.foundation.blockEntity.behaviour.BlockEntityBehaviour;
@@ -162,6 +165,42 @@ public class FrogTerminalBlockEntity extends SmartBlockEntity implements MenuPro
 		}
 
 		return result;
+	}
+
+	/**
+	 * Frogports attached to chain conveyors in the same network as this terminal's target conveyor.
+	 * Map keys are offsets from conveyor to port (Create's {@code loopPorts} / {@code travelPorts} keys).
+	 */
+	public List<NetworkFrogport> getNetworkFrogports() {
+		return getNetworkFrogports(getConnectedChainConveyors());
+	}
+
+	public List<NetworkFrogport> getNetworkFrogports(List<BlockPos> conveyors) {
+		if (conveyors.isEmpty() || level == null)
+			return List.of();
+		Map<BlockPos, String> byPos = new LinkedHashMap<>();
+		for (BlockPos conv : conveyors) {
+			if (!(level.getBlockEntity(conv) instanceof ChainConveyorBlockEntity ccbe))
+				continue;
+			mergeFrogportsFromMap(byPos, conv, ccbe.loopPorts);
+			mergeFrogportsFromMap(byPos, conv, ccbe.travelPorts);
+		}
+		List<NetworkFrogport> out = new ArrayList<>(byPos.size());
+		for (Map.Entry<BlockPos, String> e : byPos.entrySet())
+			out.add(new NetworkFrogport(e.getKey(), e.getValue()));
+		return out;
+	}
+
+	private static void mergeFrogportsFromMap(Map<BlockPos, String> out, BlockPos conveyorPos,
+		Map<BlockPos, ConnectedPort> ports) {
+		for (Map.Entry<BlockPos, ConnectedPort> e : ports.entrySet()) {
+			BlockPos frogPos = conveyorPos.offset(e.getKey());
+			String filter = e.getValue().filter();
+			out.putIfAbsent(frogPos, filter != null ? filter : "");
+		}
+	}
+
+	public record NetworkFrogport(BlockPos pos, String addressFilter) {
 	}
 
 	public ItemInteractionResult use(Player player) {

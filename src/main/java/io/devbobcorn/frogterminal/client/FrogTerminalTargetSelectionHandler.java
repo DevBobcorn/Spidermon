@@ -4,6 +4,7 @@ import com.simibubi.create.content.logistics.packagePort.PackagePortTarget;
 import com.simibubi.create.infrastructure.config.AllConfigs;
 
 import io.devbobcorn.frogterminal.FrogTerminalMod;
+import io.devbobcorn.frogterminal.block.FrogTerminalBlockEntity;
 import io.devbobcorn.frogterminal.network.FrogTerminalPlacementPacket;
 
 import net.createmod.catnip.animation.AnimationTickHolder;
@@ -20,6 +21,8 @@ import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.HitResult;
 import net.minecraft.world.phys.HitResult.Type;
 import net.minecraft.world.phys.Vec3;
+
+import net.neoforged.neoforge.common.Tags;
 import net.neoforged.neoforge.network.PacketDistributor;
 
 public class FrogTerminalTargetSelectionHandler {
@@ -30,7 +33,7 @@ public class FrogTerminalTargetSelectionHandler {
 	public static void flushSettings(BlockPos pos) {
 		if (activePackageTarget == null) {
 			Minecraft.getInstance().player.displayClientMessage(
-				Component.translatable("frogterminal.frog_terminal.not_targeting_anything"), true);
+				Component.translatable("create.package_port.not_targeting_anything"), true);
 			return;
 		}
 
@@ -45,20 +48,47 @@ public class FrogTerminalTargetSelectionHandler {
 	public static void tick() {
 		Minecraft mc = Minecraft.getInstance();
 		LocalPlayer player = mc.player;
+		boolean isWrench = player.getMainHandItem().is(Tags.Items.TOOLS_WRENCH);
 
-		if (activePackageTarget == null)
-			return;
-		if (!player.getMainHandItem().is(FrogTerminalMod.FROG_TERMINAL_ITEM.get()))
-			return;
+		if (!isWrench) {
+			if (activePackageTarget == null)
+				return;
+			if (!player.getMainHandItem().is(FrogTerminalMod.FROG_TERMINAL_ITEM.get()))
+				return;
+		}
 
 		HitResult objectMouseOver = mc.hitResult;
 		if (!(objectMouseOver instanceof BlockHitResult blockRayTraceResult))
 			return;
 
+		if (isWrench) {
+			if (blockRayTraceResult.getType() == Type.MISS)
+				return;
+			BlockPos pos = blockRayTraceResult.getBlockPos();
+			if (!mc.level.getBlockState(pos).is(FrogTerminalMod.FROG_TERMINAL_BLOCK.get()))
+				return;
+			if (!(mc.level.getBlockEntity(pos) instanceof FrogTerminalBlockEntity be))
+				return;
+			if (be.target == null)
+				return;
+			Vec3 source = Vec3.atBottomCenterOf(pos);
+			Vec3 target = be.target.getExactTargetLocation(null, mc.level, pos);
+			if (target == Vec3.ZERO)
+				return;
+			Color color = new Color(0x9ede73);
+			animateConnection(mc, source, target, color);
+			Outliner.getInstance()
+				.chaseAABB("ChainPointSelected", new AABB(target, target))
+				.colored(color)
+				.lineWidth(1 / 5f)
+				.disableLineNormals();
+			return;
+		}
+
 		Vec3 target = exactPositionOfTarget;
 		if (blockRayTraceResult.getType() == Type.MISS) {
 			Outliner.getInstance()
-				.chaseAABB("FrogTerminalChainPointSelected", new AABB(target, target))
+				.chaseAABB("ChainPointSelected", new AABB(target, target))
 				.colored(0x9ede73)
 				.lineWidth(1 / 5f)
 				.disableLineNormals();
@@ -77,13 +107,13 @@ public class FrogTerminalTargetSelectionHandler {
 
 		player.displayClientMessage(
 			Component.translatable(valid
-				? "frogterminal.frog_terminal.valid"
+				? "create.package_port.valid"
 				: validateDiff)
 				.withColor(color.getRGB()),
 			true);
 
 		Outliner.getInstance()
-			.chaseAABB("FrogTerminalChainPointSelected", new AABB(target, target))
+			.chaseAABB("ChainPointSelected", new AABB(target, target))
 			.colored(color)
 			.lineWidth(1 / 5f)
 			.disableLineNormals();
@@ -93,7 +123,7 @@ public class FrogTerminalTargetSelectionHandler {
 			return;
 
 		Outliner.getInstance()
-			.chaseAABB("FrogTerminalTargetedPos", new AABB(pos).contract(0, 1, 0)
+			.chaseAABB("TargetedFrogPos", new AABB(pos).contract(0, 1, 0)
 				.deflate(0.125, 0, 0.125))
 			.colored(color)
 			.lineWidth(1 / 16f)
@@ -120,9 +150,9 @@ public class FrogTerminalTargetSelectionHandler {
 		Vec3 source = Vec3.atBottomCenterOf(placedPos);
 		Vec3 diff = target.subtract(source);
 		if (diff.y < 0)
-			return "frogterminal.frog_terminal.cannot_reach_down";
+			return "create.package_port.cannot_reach_down";
 		if (diff.length() > AllConfigs.server().logistics.packagePortRange.get())
-			return "frogterminal.frog_terminal.too_far";
+			return "create.package_port.too_far";
 		return null;
 	}
 }
