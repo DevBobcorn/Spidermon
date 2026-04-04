@@ -1,0 +1,7 @@
+{
+  "variants": {
+    "": {
+      "model": "spidermon:block/package_spidermon/block"
+    }
+  }
+}

@@ -1,0 +1,14 @@
+{
+  "itemGroup.spidermon": "Create: Spidermon",
+  "block.spidermon.package_spidermon": "Package Spidermon",
+
+  "spidermon.screen.map_hint": "Scroll: zoom | Drag: pan (north up)",
+  "spidermon.screen.map_tooltip_terminal": "Frog Terminal: %s, %s, %s",
+  "spidermon.screen.map_tooltip_conveyor": "Chain Conveyor: %s, %s, %s",
+  "spidermon.screen.map_tooltip_chain": "Chain: %s, %s, %s ↔ %s, %s, %s",
+  "spidermon.screen.map_tooltip_frogport_location": "Package Frogport: %s, %s, %s",
+  "spidermon.screen.map_tooltip_frogport_empty": "(No address filter)",
+  "spidermon.screen.map_tooltip_looping_header": "Looping packages:",
+  "spidermon.screen.map_tooltip_looping_no_destination": "(No destination address)",
+  "spidermon.screen.map_tooltip_traveling_header": "Packages toward %s, %s, %s:"
+}

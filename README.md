@@ -1,8 +1,8 @@
 ![banner.png](banner.png)
 
-# FrogTerminal
+# Spidermon
 
-This mod introduces Frog Terminal, which provides a clear view of your [Create](https://github.com/Creators-of-Create/Create) logistics network.
+This mod introduces Package Spidermon, which provides a clear view of your [Create](https://github.com/Creators-of-Create/Create) chain conveyor network.
 
 ## License
 
