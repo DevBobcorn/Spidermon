@@ -3,6 +3,7 @@ package io.devbobcorn.frogterminal.client;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 import com.simibubi.create.content.kinetics.chainConveyor.ChainConveyorBlockEntity;
@@ -13,6 +14,7 @@ import io.devbobcorn.frogterminal.block.FrogTerminalBlockEntity;
 import io.devbobcorn.frogterminal.block.FrogTerminalBlockEntity.NetworkFrogport;
 import io.devbobcorn.frogterminal.block.FrogTerminalMenu;
 
+import net.minecraft.ChatFormatting;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
@@ -22,7 +24,10 @@ import net.minecraft.network.chat.MutableComponent;
 import net.minecraft.util.Mth;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.SpawnEggItem;
 import net.minecraft.world.level.Level;
+import net.neoforged.neoforge.items.ItemStackHandler;
+import net.minecraft.world.phys.Vec3;
 
 public class FrogTerminalScreen extends AbstractContainerScreen<FrogTerminalMenu> {
 
@@ -37,6 +42,7 @@ public class FrogTerminalScreen extends AbstractContainerScreen<FrogTerminalMenu
 	private static final int FROGPORT_COLOR = 0xFF0d2d6e;
 	private static final int FROGPORT_LABEL_COLOR = 0xFFb8c8e8;
 	private static final int TERMINAL_COLOR = 0xFFe8c84a;
+	private static final int TRAVEL_PACKAGE_DOT_COLOR = 0xFFFFFFFF;
 
 	private static final int MAP_PADDING = 6;
 	private static final int TITLE_TOP = 6;
@@ -49,6 +55,8 @@ public class FrogTerminalScreen extends AbstractContainerScreen<FrogTerminalMenu
 	private static final int CONVEYOR_SIZE_PX = 4;
 	private static final double CHAIN_HOVER_PX = 3.0;
 	private static final double CHAIN_HOVER_PX_SQ = CHAIN_HOVER_PX * CHAIN_HOVER_PX;
+	/** Spaces before looping-package destination and content lines (under the package title). */
+	private static final String LOOPING_DETAIL_INDENT = "    ";
 
 	private List<BlockPos> connectedConveyors = List.of();
 	private List<MapEdge> chainEdges = List.of();
@@ -252,6 +260,8 @@ public class FrogTerminalScreen extends AbstractContainerScreen<FrogTerminalMenu
 				drawLine(guiGraphics, x0, y0, x1, y1, EDGE_COLOR);
 			}
 
+			drawTravelingPackageDots(be, guiGraphics);
+
 			for (BlockPos p : connectedConveyors) {
 				int cx = screenXFromWorld(p.getX() + 0.5);
 				int cy = screenYFromWorld(p.getZ() + 0.5);
@@ -268,13 +278,10 @@ public class FrogTerminalScreen extends AbstractContainerScreen<FrogTerminalMenu
 				int fy = screenYFromWorld(p.getZ() + 0.5);
 				guiGraphics.fill(fx - FROGPORT_SIZE_PX + 1, fy - FROGPORT_SIZE_PX + 1, fx + FROGPORT_SIZE_PX, fy + FROGPORT_SIZE_PX, FROGPORT_COLOR);
 				String filter = fp.addressFilter();
-				String label = filter.isEmpty()
-					? Component.translatable("frogterminal.screen.map_frogport_label_empty").getString()
-					: filter;
 				int textX = fx + 4;
 				int maxTextW = ml + mw - textX - 2;
-				if (maxTextW > 8) {
-					String clipped = truncateLabelToWidth(font, label, maxTextW);
+				if (maxTextW > 8 && !filter.isEmpty()) {
+					String clipped = truncateLabelToWidth(font, filter, maxTextW);
 					int textY = fy - font.lineHeight / 2 + 1;
 					guiGraphics.drawString(font, clipped, textX, textY, FROGPORT_LABEL_COLOR, false);
 				}
@@ -287,6 +294,27 @@ public class FrogTerminalScreen extends AbstractContainerScreen<FrogTerminalMenu
 		}
 
 		guiGraphics.disableScissor();
+	}
+
+	private void drawTravelingPackageDots(FrogTerminalBlockEntity be, GuiGraphics guiGraphics) {
+		Level level = be.getLevel();
+		if (level == null)
+			return;
+		for (BlockPos convPos : connectedConveyors) {
+			if (!(level.getBlockEntity(convPos) instanceof ChainConveyorBlockEntity ccbe))
+				continue;
+			for (Map.Entry<BlockPos, List<ChainConveyorPackage>> entry : ccbe.getTravellingPackages().entrySet()) {
+				BlockPos connection = entry.getKey();
+				for (ChainConveyorPackage pkg : entry.getValue()) {
+					Vec3 pos = ccbe.getPackagePosition(pkg.chainPosition, connection);
+					if (pos == Vec3.ZERO)
+						continue;
+					int px = Mth.floor(mapMidScreenX() + (pos.x - viewCenterX) * pixelsPerBlock);
+					int py = Mth.floor(mapMidScreenY() + (pos.z - viewCenterZ) * pixelsPerBlock);
+					guiGraphics.fill(px, py, px + 2, py + 2, TRAVEL_PACKAGE_DOT_COLOR);
+				}
+			}
+		}
 	}
 
 	private static String truncateLabelToWidth(Font font, String text, int maxWidth) {
@@ -379,9 +407,7 @@ public class FrogTerminalScreen extends AbstractContainerScreen<FrogTerminalMenu
 			int x1 = screenXFromWorld(edge.b().getX() + 0.5);
 			int y1 = screenYFromWorld(edge.b().getZ() + 0.5);
 			if (distSqPointSegment(mx, my, x0, y0, x1, y1) <= CHAIN_HOVER_PX_SQ)
-				return List.of(Component.translatable("frogterminal.screen.map_tooltip_chain",
-					edge.a().getX(), edge.a().getY(), edge.a().getZ(),
-					edge.b().getX(), edge.b().getY(), edge.b().getZ()));
+				return chainEdgeHoverLines(be.getLevel(), edge);
 		}
 
 		return List.of();
@@ -393,27 +419,130 @@ public class FrogTerminalScreen extends AbstractContainerScreen<FrogTerminalMenu
 			p.getX(), p.getY(), p.getZ()));
 		if (ccbe == null)
 			return lines;
+
 		List<ChainConveyorPackage> looping = ccbe.getLoopingPackages();
-		if (looping.isEmpty())
-			return lines;
-		lines.add(Component.translatable("frogterminal.screen.map_tooltip_looping_header"));
-		for (ChainConveyorPackage pkg : looping)
-			lines.add(loopingPackageLine(pkg));
+		if (!looping.isEmpty()) {
+			lines.add(Component.empty());
+			lines.add(Component.translatable("frogterminal.screen.map_tooltip_looping_header")
+				.withStyle(ChatFormatting.YELLOW));
+			boolean first = true;
+			for (ChainConveyorPackage pkg : looping) {
+				if (!first)
+					lines.add(Component.empty());
+				first = false;
+				appendConveyorPackageTooltipLines(lines, pkg);
+			}
+		}
+
 		return lines;
 	}
 
-	private static Component loopingPackageLine(ChainConveyorPackage pkg) {
-		ItemStack stack = pkg.item;
+	/**
+	 * Traveling packages on this segment are owned by the conveyor at each end (see
+	 * {@link ChainConveyorBlockEntity#getTravellingPackages()}); gather both directions for this edge.
+	 */
+	private static List<Component> chainEdgeHoverLines(Level level, MapEdge edge) {
+		List<Component> lines = new ArrayList<>();
+		lines.add(Component.translatable("frogterminal.screen.map_tooltip_chain",
+			edge.a().getX(), edge.a().getY(), edge.a().getZ(),
+			edge.b().getX(), edge.b().getY(), edge.b().getZ()));
 
-		MutableComponent line = Component.empty();
-		line.append(stack.getDisplayName());
+		if (level == null)
+			return lines;
 
-		String addr = PackageItem.getAddress(stack);
-		if (!addr.isEmpty()) {
-			line.append(Component.literal(" · "));
-			line.append(Component.literal(addr));
+		BlockPos a = edge.a();
+		BlockPos b = edge.b();
+		BlockPos aToB = b.subtract(a);
+		BlockPos bToA = a.subtract(b);
+
+		List<ChainConveyorPackage> fromA = List.of();
+		if (level.getBlockEntity(a) instanceof ChainConveyorBlockEntity ccA) {
+			List<ChainConveyorPackage> list = ccA.getTravellingPackages().get(aToB);
+			if (list != null && !list.isEmpty())
+				fromA = list;
 		}
-		return line;
+		List<ChainConveyorPackage> fromB = List.of();
+		if (level.getBlockEntity(b) instanceof ChainConveyorBlockEntity ccB) {
+			List<ChainConveyorPackage> list = ccB.getTravellingPackages().get(bToA);
+			if (list != null && !list.isEmpty())
+				fromB = list;
+		}
+
+		if (fromA.isEmpty() && fromB.isEmpty())
+			return lines;
+
+		lines.add(Component.empty());
+
+		boolean firstDir = true;
+		if (!fromA.isEmpty()) {
+			appendTravelingDirectionOnEdge(lines, b, fromA, firstDir);
+			firstDir = false;
+		}
+		if (!fromB.isEmpty()) {
+			appendTravelingDirectionOnEdge(lines, a, fromB, firstDir);
+		}
+
+		return lines;
+	}
+
+	private static void appendTravelingDirectionOnEdge(List<Component> lines, BlockPos toward,
+		List<ChainConveyorPackage> pkgs, boolean firstDirectionGroup) {
+		if (!firstDirectionGroup)
+			lines.add(Component.empty());
+		lines.add(Component.translatable("frogterminal.screen.map_tooltip_traveling_header",
+			toward.getX(), toward.getY(), toward.getZ()).withStyle(ChatFormatting.DARK_AQUA));
+		boolean firstPkg = true;
+		for (ChainConveyorPackage pkg : pkgs) {
+			if (!firstPkg)
+				lines.add(Component.empty());
+			firstPkg = false;
+			appendConveyorPackageTooltipLines(lines, pkg);
+		}
+	}
+
+	/**
+	 * Destination and contents mirror {@link PackageItem#appendHoverText} in Create.
+	 */
+	private static void appendConveyorPackageTooltipLines(List<Component> lines, ChainConveyorPackage pkg) {
+		ItemStack stack = pkg.item;
+		MutableComponent title = stack.getDisplayName().copy().withStyle(ChatFormatting.WHITE);
+		title.append(Component.literal(" "));
+		String addr = PackageItem.getAddress(stack);
+		if (addr.isEmpty())
+			title.append(Component.translatable("frogterminal.screen.map_tooltip_looping_no_destination")
+				.withStyle(ChatFormatting.DARK_GRAY));
+		else
+			title.append(Component.literal("\u2192 ").append(Component.literal(addr)).withStyle(ChatFormatting.GOLD));
+		lines.add(title);
+
+		if (!PackageItem.isPackage(stack))
+			return;
+
+		ItemStackHandler contents = PackageItem.getContents(stack);
+		int visibleNames = 0;
+		int skippedNames = 0;
+		for (int i = 0; i < contents.getSlots(); i++) {
+			ItemStack slotStack = contents.getStackInSlot(i);
+			if (slotStack.isEmpty())
+				continue;
+			if (slotStack.getItem() instanceof SpawnEggItem)
+				continue;
+			if (visibleNames >= 3) {
+				skippedNames++;
+				continue;
+			}
+			visibleNames++;
+			lines.add(Component.literal(LOOPING_DETAIL_INDENT).append(
+				slotStack.getHoverName()
+					.copy()
+					.append(" x")
+					.append(String.valueOf(slotStack.getCount()))
+					.withStyle(ChatFormatting.GRAY)));
+		}
+		if (skippedNames > 0)
+			lines.add(Component.literal(LOOPING_DETAIL_INDENT).append(
+				Component.translatable("container.shulkerBox.more", skippedNames)
+					.withStyle(ChatFormatting.ITALIC, ChatFormatting.GRAY)));
 	}
 
 	private static double distSqPointSegment(double px, double py, double x0, double y0, double x1, double y1) {

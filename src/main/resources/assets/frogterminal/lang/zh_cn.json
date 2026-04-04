@@ -5,9 +5,10 @@
   "frogterminal.screen.map_hint": "滚轮缩放 | 左键拖动平移（向上为北）",
   "frogterminal.screen.map_tooltip_terminal": "青蛙终端：%s, %s, %s",
   "frogterminal.screen.map_tooltip_conveyor": "锁链传动轮：%s, %s, %s",
-  "frogterminal.screen.map_tooltip_chain": "锁链：%s, %s, %s → %s, %s, %s",
+  "frogterminal.screen.map_tooltip_chain": "锁链：%s, %s, %s ↔ %s, %s, %s",
   "frogterminal.screen.map_tooltip_frogport_location": "货物蛙港：%s, %s, %s",
   "frogterminal.screen.map_tooltip_frogport_empty": "（无地址过滤器）",
-  "frogterminal.screen.map_frogport_label_empty": "—",
-  "frogterminal.screen.map_tooltip_looping_header": "正在转圈圈的包裹："
+  "frogterminal.screen.map_tooltip_looping_header": "转圈圈的包裹：",
+  "frogterminal.screen.map_tooltip_looping_no_destination": "（无目的地地址）",
+  "frogterminal.screen.map_tooltip_traveling_header": "前往 %s, %s, %s 的包裹："
 }

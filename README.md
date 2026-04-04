@@ -2,7 +2,7 @@
 
 # FrogTerminal
 
-This mod introduces an advanced variant of Stressometer from [Create](https://github.com/Creators-of-Create/Create).
+This mod introduces Frog Terminal, which provides a clear view of your [Create](https://github.com/Creators-of-Create/Create) logistics network.
 
 ## License
 
