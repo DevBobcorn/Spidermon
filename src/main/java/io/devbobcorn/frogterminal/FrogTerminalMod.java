@@ -6,8 +6,6 @@ import org.slf4j.Logger;
 
 import com.mojang.logging.LogUtils;
 
-import io.devbobcorn.frogterminal.block.AdvancedStressometerBlock;
-import io.devbobcorn.frogterminal.block.AdvancedStressometerBlockEntity;
 import io.devbobcorn.frogterminal.block.FrogTerminalBlock;
 import io.devbobcorn.frogterminal.block.FrogTerminalBlockEntity;
 import io.devbobcorn.frogterminal.block.FrogTerminalItem;
@@ -17,13 +15,11 @@ import io.devbobcorn.frogterminal.network.FrogTerminalPlacementPacket;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.world.inventory.MenuType;
 import net.minecraft.network.chat.Component;
-import net.minecraft.world.item.BlockItem;
 import net.minecraft.world.item.CreativeModeTab;
 import net.minecraft.world.item.CreativeModeTabs;
 import net.minecraft.world.level.block.SoundType;
 import net.minecraft.world.level.block.entity.BlockEntityType;
 import net.minecraft.world.level.block.state.BlockBehaviour;
-import net.minecraft.world.level.block.state.properties.NoteBlockInstrument;
 import net.minecraft.world.level.material.MapColor;
 import net.neoforged.bus.api.IEventBus;
 import net.neoforged.bus.api.SubscribeEvent;
@@ -57,27 +53,6 @@ public class FrogTerminalMod {
     public static final DeferredRegister<MenuType<?>> MENU_TYPES =
             DeferredRegister.create(Registries.MENU, MODID);
 
-    // Advanced Stressometer — block, item, and block entity
-    public static final DeferredBlock<AdvancedStressometerBlock> ADVANCED_STRESSOMETER_BLOCK =
-            BLOCKS.register("advanced_stressometer",
-                    () -> new AdvancedStressometerBlock(BlockBehaviour.Properties.of()
-                            .mapColor(MapColor.PODZOL)
-                            .instrument(NoteBlockInstrument.BASS)
-                            .strength(2.0F)
-                            .sound(SoundType.WOOD)
-                            .ignitedByLava()
-                            .noOcclusion()));
-
-    public static final DeferredItem<BlockItem> ADVANCED_STRESSOMETER_ITEM =
-            ITEMS.registerSimpleBlockItem("advanced_stressometer", ADVANCED_STRESSOMETER_BLOCK);
-
-    public static final Supplier<BlockEntityType<AdvancedStressometerBlockEntity>> ADVANCED_STRESSOMETER_BE =
-            BLOCK_ENTITY_TYPES.register("advanced_stressometer",
-                    () -> BlockEntityType.Builder.of(
-                            (pos, state) -> new AdvancedStressometerBlockEntity(
-                                    FrogTerminalMod.ADVANCED_STRESSOMETER_BE.get(), pos, state),
-                            ADVANCED_STRESSOMETER_BLOCK.get()).build(null));
-
     // Frog Terminal — block, item, and block entity
     public static final DeferredBlock<FrogTerminalBlock> FROG_TERMINAL_BLOCK =
             BLOCKS.register("frog_terminal",
@@ -106,9 +81,8 @@ public class FrogTerminalMod {
     public static final DeferredHolder<CreativeModeTab, CreativeModeTab> EXAMPLE_TAB = CREATIVE_MODE_TABS.register("example_tab", () -> CreativeModeTab.builder()
             .title(Component.translatable("itemGroup.frogterminal")) //The language key for the title of your CreativeModeTab
             .withTabsBefore(CreativeModeTabs.COMBAT)
-            .icon(() -> ADVANCED_STRESSOMETER_ITEM.get().getDefaultInstance())
+            .icon(() -> FROG_TERMINAL_ITEM.get().getDefaultInstance())
             .displayItems((parameters, output) -> {
-                output.accept(ADVANCED_STRESSOMETER_ITEM.get());
                 output.accept(FROG_TERMINAL_ITEM.get());
             }).build());
 

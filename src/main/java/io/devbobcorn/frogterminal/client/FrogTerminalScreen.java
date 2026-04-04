@@ -1,10 +1,13 @@
 package io.devbobcorn.frogterminal.client;
 
+import java.util.List;
+
 import io.devbobcorn.frogterminal.block.FrogTerminalBlockEntity;
 import io.devbobcorn.frogterminal.block.FrogTerminalMenu;
 
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
+import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.phys.Vec3;
@@ -17,11 +20,26 @@ public class FrogTerminalScreen extends AbstractContainerScreen<FrogTerminalMenu
 	private static final int LABEL_COLOR = 0xAAAAAA;
 	private static final int VALUE_COLOR = 0xFFFFFF;
 	private static final int ERROR_COLOR = 0xFF7171;
+	private static final int LINE_HEIGHT = 10;
+
+	private List<BlockPos> connectedConveyors = List.of();
 
 	public FrogTerminalScreen(FrogTerminalMenu menu, Inventory playerInventory, Component title) {
 		super(menu, playerInventory, title);
 		this.imageWidth = 200;
 		this.imageHeight = 80;
+	}
+
+	@Override
+	protected void init() {
+		FrogTerminalBlockEntity be = menu.blockEntity;
+		if (be != null) {
+			connectedConveyors = be.getConnectedChainConveyors();
+		}
+		this.imageHeight = connectedConveyors.isEmpty()
+			? 80
+			: 80 + connectedConveyors.size() * LINE_HEIGHT;
+		super.init();
 	}
 
 	@Override
@@ -60,6 +78,18 @@ public class FrogTerminalScreen extends AbstractContainerScreen<FrogTerminalMenu
 			guiGraphics.drawCenteredString(font,
 				Component.translatable("frogterminal.screen.no_target"),
 				imageWidth / 2, 35, ERROR_COLOR);
+		}
+
+		if (!connectedConveyors.isEmpty()) {
+			guiGraphics.drawCenteredString(font,
+				Component.translatable("frogterminal.screen.connected_conveyors", connectedConveyors.size()),
+				imageWidth / 2, 60, LABEL_COLOR);
+			int y = 72;
+			for (BlockPos pos : connectedConveyors) {
+				String posStr = String.format("%d, %d, %d", pos.getX(), pos.getY(), pos.getZ());
+				guiGraphics.drawCenteredString(font, posStr, imageWidth / 2, y, VALUE_COLOR);
+				y += LINE_HEIGHT;
+			}
 		}
 	}
 }

@@ -1,7 +1,5 @@
 package io.devbobcorn.frogterminal;
 
-import io.devbobcorn.frogterminal.client.AdvancedStressometerRenderer;
-import io.devbobcorn.frogterminal.client.AdvancedStressometerVisual;
 import io.devbobcorn.frogterminal.client.FrogTerminalPartialModels;
 import io.devbobcorn.frogterminal.client.FrogTerminalRenderer;
 import io.devbobcorn.frogterminal.client.FrogTerminalScreen;
@@ -41,11 +39,6 @@ public class FrogTerminalClient {
         FrogTerminalMod.LOGGER.info("HELLO FROM CLIENT SETUP");
         FrogTerminalMod.LOGGER.info("MINECRAFT NAME >> {}", Minecraft.getInstance().getUser().getName());
 
-        SimpleBlockEntityVisualizer.builder(FrogTerminalMod.ADVANCED_STRESSOMETER_BE.get())
-                .factory(AdvancedStressometerVisual::new)
-                .skipVanillaRender(be -> true)
-                .apply();
-
         SimpleBlockEntityVisualizer.builder(FrogTerminalMod.FROG_TERMINAL_BE.get())
                 .factory(FrogTerminalVisual::new)
                 .skipVanillaRender(be -> true)
@@ -65,8 +58,6 @@ public class FrogTerminalClient {
     }
 
     static void registerRenderers(EntityRenderersEvent.RegisterRenderers event) {
-        event.registerBlockEntityRenderer(FrogTerminalMod.ADVANCED_STRESSOMETER_BE.get(),
-                AdvancedStressometerRenderer::new);
         event.registerBlockEntityRenderer(FrogTerminalMod.FROG_TERMINAL_BE.get(),
                 FrogTerminalRenderer::new);
     }

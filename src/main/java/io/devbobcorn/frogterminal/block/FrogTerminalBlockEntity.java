@@ -1,8 +1,13 @@
 package io.devbobcorn.frogterminal.block;
 
+import java.util.ArrayDeque;
+import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 import com.simibubi.create.AllItems;
+import com.simibubi.create.content.kinetics.chainConveyor.ChainConveyorBlockEntity;
 import com.simibubi.create.content.logistics.packagePort.PackagePortTarget;
 import com.simibubi.create.foundation.blockEntity.SmartBlockEntity;
 import com.simibubi.create.foundation.blockEntity.behaviour.BlockEntityBehaviour;
@@ -123,6 +128,40 @@ public class FrogTerminalBlockEntity extends SmartBlockEntity implements MenuPro
 			return passiveYaw;
 		Vec3 diff = loc.subtract(Vec3.atCenterOf(worldPosition));
 		return (float) (Mth.atan2(diff.x, diff.z) * Mth.RAD_TO_DEG) + 180;
+	}
+
+	public List<BlockPos> getConnectedChainConveyors() {
+		if (target == null || level == null)
+			return List.of();
+		BlockPos startPos = worldPosition.offset(target.relativePos);
+		if (!level.isLoaded(startPos))
+			return List.of();
+		if (!(level.getBlockEntity(startPos) instanceof ChainConveyorBlockEntity))
+			return List.of();
+
+		List<BlockPos> result = new ArrayList<>();
+		Set<BlockPos> visited = new HashSet<>();
+		ArrayDeque<BlockPos> queue = new ArrayDeque<>();
+
+		visited.add(startPos);
+		queue.add(startPos);
+
+		while (!queue.isEmpty() && result.size() < 64) {
+			BlockPos current = queue.poll();
+			result.add(current);
+
+			if (level.getBlockEntity(current) instanceof ChainConveyorBlockEntity ccbe) {
+				for (BlockPos offset : ccbe.connections) {
+					BlockPos neighbor = current.offset(offset);
+					if (!visited.contains(neighbor) && level.isLoaded(neighbor)) {
+						visited.add(neighbor);
+						queue.add(neighbor);
+					}
+				}
+			}
+		}
+
+		return result;
 	}
 
 	public ItemInteractionResult use(Player player) {
