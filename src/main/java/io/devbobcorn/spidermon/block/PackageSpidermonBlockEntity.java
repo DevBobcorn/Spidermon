@@ -74,6 +74,11 @@ public class PackageSpidermonBlockEntity extends SmartBlockEntity implements Men
 		return false;
 	}
 
+	/** Synced count of players with the Spidermon menu open; used for client effects (e.g. chain particles). */
+	public int getMenuOpenCount() {
+		return openTracker == null ? 0 : openTracker.openCount;
+	}
+
 	public Vec3 getExactTargetLocation() {
 		if (target == null)
 			return Vec3.ZERO;

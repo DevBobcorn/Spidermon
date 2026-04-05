@@ -374,9 +374,6 @@ public class PackageSpidermonScreen extends AbstractContainerScreen<PackageSpide
 
 	@Override
 	public void render(GuiGraphics guiGraphics, int mouseX, int mouseY, float partialTick) {
-		if (minecraft != null)
-			PackageSpidermonTargetSelectionHandler.renderPackageSpidermonScreenChainParticles(minecraft,
-				menu.contentHolder, partialTick);
 		super.render(guiGraphics, mouseX, mouseY, partialTick);
 		List<Component> hover = pickMapHoverTooltip(mouseX, mouseY);
 		if (!hover.isEmpty())

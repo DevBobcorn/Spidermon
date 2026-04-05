@@ -147,13 +147,13 @@ public class PackageSpidermonTargetSelectionHandler {
 	}
 
 	/**
-	 * While the Spidermon UI is open, draws a white dust particle string from the block to the chain
-	 * point. Length follows {@link PackageSpidermonBlockEntity#manualOpenAnimationProgress} (same
-	 * open/close timing as the block model).
+	 * Draws a white dust particle string from the block to the chain point when any player has the
+	 * Spidermon menu open ({@link PackageSpidermonBlockEntity#getMenuOpenCount()}), or while the open
+	 * animation is still closing. Length follows {@link PackageSpidermonBlockEntity#manualOpenAnimationProgress}.
 	 */
 	public static void renderPackageSpidermonScreenChainParticles(Minecraft mc,
 		PackageSpidermonBlockEntity be, float partialTick) {
-		if (be == null || mc.level == null)
+		if (be == null || mc.level == null || mc.level != be.getLevel())
 			return;
 		if (be.target == null)
 			return;
@@ -162,7 +162,7 @@ public class PackageSpidermonTargetSelectionHandler {
 		if (target == Vec3.ZERO)
 			return;
 		float extent = be.manualOpenAnimationProgress.getValue(partialTick);
-		if (extent <= 1e-4f)
+		if (be.getMenuOpenCount() == 0 && extent <= 1e-4f)
 			return;
 		Vec3 end = source.lerp(target, extent);
 		animateConnection(mc, source, end, new Color(0xFFFFFF));

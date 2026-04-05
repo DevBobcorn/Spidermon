@@ -8,6 +8,7 @@ import io.devbobcorn.spidermon.block.PackageSpidermonBlockEntity;
 import dev.engine_room.flywheel.api.visualization.VisualizationManager;
 import net.createmod.catnip.render.CachedBuffers;
 import net.createmod.catnip.render.SuperByteBuffer;
+import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.RenderType;
 import net.minecraft.client.renderer.blockentity.BlockEntityRendererProvider.Context;
@@ -37,5 +38,8 @@ public class PackageSpidermonRenderer extends SmartBlockEntityRenderer<PackageSp
 			.light(light)
 			.overlay(overlay)
 			.renderInto(ms, buffer.getBuffer(RenderType.cutoutMipped()));
+
+		PackageSpidermonTargetSelectionHandler.renderPackageSpidermonScreenChainParticles(Minecraft.getInstance(),
+			blockEntity, partialTicks);
 	}
 }

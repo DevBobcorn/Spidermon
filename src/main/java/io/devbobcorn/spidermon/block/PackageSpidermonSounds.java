@@ -20,18 +20,6 @@ public class PackageSpidermonSounds {
 			true);
 	}
 
-	public void catchPackage(Level level, BlockPos pos) {
-		if (!isPlayerNear(pos))
-			return;
-		AllSoundEvents.FROGPORT_CATCH.playAt(level, Vec3.atCenterOf(pos), 1, 1, false);
-	}
-
-	public void depositPackage(Level level, BlockPos pos) {
-		if (!isPlayerNear(pos))
-			return;
-		AllSoundEvents.FROGPORT_DEPOSIT.playAt(level, Vec3.atCenterOf(pos), 1, 1, false);
-	}
-
 	private boolean isPlayerNear(BlockPos pos) {
 		return pos.closerThan(Minecraft.getInstance().player.blockPosition(), 20);
 	}
