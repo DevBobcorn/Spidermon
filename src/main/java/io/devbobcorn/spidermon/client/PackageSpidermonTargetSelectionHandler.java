@@ -146,6 +146,28 @@ public class PackageSpidermonTargetSelectionHandler {
 		}
 	}
 
+	/**
+	 * While the Spidermon UI is open, draws a white dust particle string from the block to the chain
+	 * point. Length follows {@link PackageSpidermonBlockEntity#manualOpenAnimationProgress} (same
+	 * open/close timing as the block model).
+	 */
+	public static void renderPackageSpidermonScreenChainParticles(Minecraft mc,
+		PackageSpidermonBlockEntity be, float partialTick) {
+		if (be == null || mc.level == null)
+			return;
+		if (be.target == null)
+			return;
+		Vec3 source = Vec3.atBottomCenterOf(be.getBlockPos());
+		Vec3 target = be.getExactTargetLocation();
+		if (target == Vec3.ZERO)
+			return;
+		float extent = be.manualOpenAnimationProgress.getValue(partialTick);
+		if (extent <= 1e-4f)
+			return;
+		Vec3 end = source.lerp(target, extent);
+		animateConnection(mc, source, end, new Color(0xFFFFFF));
+	}
+
 	public static String validateDiff(Vec3 target, BlockPos placedPos) {
 		Vec3 source = Vec3.atBottomCenterOf(placedPos);
 		Vec3 diff = target.subtract(source);

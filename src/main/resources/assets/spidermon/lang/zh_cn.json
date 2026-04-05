@@ -2,7 +2,8 @@
   "itemGroup.spidermon": "机械动力：蜘蛛监视器",
   "block.spidermon.package_spidermon": "蜘蛛监视器",
 
-  "spidermon.screen.map_hint": "滚轮缩放 | 左键拖动平移（向上为北）",
+  "spidermon.screen.map_hint_left": "滚轮缩放 | 左键拖动平移",
+  "spidermon.screen.map_hint_right": "▲ 北 [%s 像素/格]",
   "spidermon.screen.map_tooltip_terminal": "蜘蛛监视器：%s, %s, %s",
   "spidermon.screen.map_tooltip_conveyor": "锁链传动轮：%s, %s, %s",
   "spidermon.screen.map_tooltip_chain": "锁链：%s, %s, %s ↔ %s, %s, %s",

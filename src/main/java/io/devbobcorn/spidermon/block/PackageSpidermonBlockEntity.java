@@ -14,6 +14,7 @@ import com.simibubi.create.content.kinetics.chainConveyor.ChainConveyorBlockEnti
 import com.simibubi.create.content.logistics.packagePort.PackagePortTarget;
 import com.simibubi.create.foundation.blockEntity.SmartBlockEntity;
 import com.simibubi.create.foundation.blockEntity.behaviour.BlockEntityBehaviour;
+import com.simibubi.create.foundation.blockEntity.behaviour.animatedContainer.AnimatedContainerBehaviour;
 
 import net.createmod.catnip.animation.LerpedFloat;
 import net.createmod.catnip.animation.LerpedFloat.Chaser;
@@ -48,7 +49,8 @@ public class PackageSpidermonBlockEntity extends SmartBlockEntity implements Men
 
 	public boolean goggles;
 	public float passiveYaw;
-	public int openCount;
+
+	protected AnimatedContainerBehaviour<PackageSpidermonMenu> openTracker;
 
 	private PackageSpidermonSounds sounds;
 
@@ -65,6 +67,7 @@ public class PackageSpidermonBlockEntity extends SmartBlockEntity implements Men
 
 	@Override
 	public void addBehaviours(List<BlockEntityBehaviour> behaviours) {
+		behaviours.add(openTracker = new AnimatedContainerBehaviour<>(this, PackageSpidermonMenu.class));
 	}
 
 	public boolean isAnimationInProgress() {
@@ -93,7 +96,7 @@ public class PackageSpidermonBlockEntity extends SmartBlockEntity implements Men
 	public void tick() {
 		super.tick();
 
-		manualOpenAnimationProgress.updateChaseTarget(openCount > 0 ? 1 : 0);
+		manualOpenAnimationProgress.updateChaseTarget(openTracker.openCount > 0 ? 1 : 0);
 		boolean wasOpen = manualOpenAnimationProgress.getValue() > 0;
 
 		manualOpenAnimationProgress.tickChaser();
@@ -233,6 +236,6 @@ public class PackageSpidermonBlockEntity extends SmartBlockEntity implements Men
 
 	@Override
 	public AbstractContainerMenu createMenu(int containerId, Inventory playerInventory, Player player) {
-		return new PackageSpidermonMenu(containerId, playerInventory, this);
+		return PackageSpidermonMenu.create(containerId, playerInventory, this);
 	}
 }

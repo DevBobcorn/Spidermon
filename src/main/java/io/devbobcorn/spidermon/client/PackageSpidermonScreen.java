@@ -48,8 +48,10 @@ public class PackageSpidermonScreen extends AbstractContainerScreen<PackageSpide
 	private static final int TITLE_TOP = 6;
 	private static final int MAP_TOP_OFFSET = 20;
 	private static final int MAP_BOTTOM_PAD = 22;
-	private static final double MIN_PIXELS_PER_BLOCK = 2.0;
-	private static final double MAX_PIXELS_PER_BLOCK = 48.0;
+	private static final int BOTTOM_HINT_PAD = 6;
+	private static final int BOTTOM_HINT_Y = 14;
+	private static final int MIN_PIXELS_PER_BLOCK = 2;
+	private static final int MAX_PIXELS_PER_BLOCK = 16;
 	private static final int TERMINAL_SIZE_PX = 3;
 	private static final int FROGPORT_SIZE_PX = 3;
 	private static final int CONVEYOR_SIZE_PX = 4;
@@ -64,7 +66,7 @@ public class PackageSpidermonScreen extends AbstractContainerScreen<PackageSpide
 
 	private double viewCenterX;
 	private double viewCenterZ;
-	private double pixelsPerBlock = 8.0;
+	private int pixelsPerBlock = 8;
 	private boolean draggingMap;
 
 	public PackageSpidermonScreen(PackageSpidermonMenu menu, Inventory playerInventory, Component title) {
@@ -76,7 +78,7 @@ public class PackageSpidermonScreen extends AbstractContainerScreen<PackageSpide
 	@Override
 	protected void init() {
 		super.init();
-		PackageSpidermonBlockEntity be = menu.blockEntity;
+		PackageSpidermonBlockEntity be = menu.contentHolder;
 		if (be != null) {
 			connectedConveyors = be.getConnectedChainConveyors();
 			chainEdges = buildChainEdges(be.getLevel(), connectedConveyors);
@@ -107,11 +109,11 @@ public class PackageSpidermonScreen extends AbstractContainerScreen<PackageSpide
 	}
 
 	private void resetViewToFit() {
-		PackageSpidermonBlockEntity be = menu.blockEntity;
+		PackageSpidermonBlockEntity be = menu.contentHolder;
 		if (be == null) {
 			viewCenterX = 0.5;
 			viewCenterZ = 0.5;
-			pixelsPerBlock = 8.0;
+			pixelsPerBlock = 8;
 			return;
 		}
 		BlockPos term = be.getBlockPos();
@@ -132,6 +134,17 @@ public class PackageSpidermonScreen extends AbstractContainerScreen<PackageSpide
 			minZ = Math.min(minZ, p.getZ());
 			maxZ = Math.max(maxZ, p.getZ());
 		}
+		if (be.target != null) {
+			Vec3 chain = be.getExactTargetLocation();
+			if (chain != Vec3.ZERO) {
+				int cx = Mth.floor(chain.x);
+				int cz = Mth.floor(chain.z);
+				minX = Math.min(minX, cx);
+				maxX = Math.max(maxX, cx);
+				minZ = Math.min(minZ, cz);
+				maxZ = Math.max(maxZ, cz);
+			}
+		}
 		viewCenterX = (minX + maxX + 1) * 0.5;
 		viewCenterZ = (minZ + maxZ + 1) * 0.5;
 		int spanX = maxX - minX + 1;
@@ -140,7 +153,7 @@ public class PackageSpidermonScreen extends AbstractContainerScreen<PackageSpide
 		int mapW = imageWidth - 2 * MAP_PADDING;
 		int mapH = imageHeight - MAP_TOP_OFFSET - MAP_BOTTOM_PAD;
 		double fit = Math.min(mapW, mapH) / (double) Math.max(span, 6);
-		pixelsPerBlock = Mth.clamp(fit, MIN_PIXELS_PER_BLOCK, MAX_PIXELS_PER_BLOCK);
+		pixelsPerBlock = Mth.clamp(Math.round((float) fit), MIN_PIXELS_PER_BLOCK, MAX_PIXELS_PER_BLOCK);
 	}
 
 	private int mapLeft() {
@@ -173,12 +186,12 @@ public class PackageSpidermonScreen extends AbstractContainerScreen<PackageSpide
 	}
 
 	private double worldXFromScreen(double screenX) {
-		return viewCenterX + (screenX - mapMidScreenX()) / pixelsPerBlock;
+		return viewCenterX + (screenX - mapMidScreenX()) / (double) pixelsPerBlock;
 	}
 
 	/** World Z increases south; screen Y increases down — so negative Z (north) is upward on the map. */
 	private double worldZFromScreen(double screenY) {
-		return viewCenterZ + (screenY - mapMidScreenY()) / pixelsPerBlock;
+		return viewCenterZ + (screenY - mapMidScreenY()) / (double) pixelsPerBlock;
 	}
 
 	private int screenXFromWorld(double wx) {
@@ -189,22 +202,28 @@ public class PackageSpidermonScreen extends AbstractContainerScreen<PackageSpide
 		return Mth.floor(mapMidScreenY() + (wz - viewCenterZ) * pixelsPerBlock);
 	}
 
-	private void zoomAtScreenPoint(double mouseX, double mouseY, double factor) {
+	/** @param delta +1 zoom in (more px/block), -1 zoom out */
+	private void zoomAtScreenPoint(double mouseX, double mouseY, int delta) {
+		if (delta == 0)
+			return;
 		double wx = worldXFromScreen(mouseX);
 		double wz = worldZFromScreen(mouseY);
-		double newScale = Mth.clamp(pixelsPerBlock * factor, MIN_PIXELS_PER_BLOCK, MAX_PIXELS_PER_BLOCK);
+		int newScale = Mth.clamp(pixelsPerBlock + delta, MIN_PIXELS_PER_BLOCK, MAX_PIXELS_PER_BLOCK);
 		if (newScale == pixelsPerBlock)
 			return;
 		pixelsPerBlock = newScale;
-		viewCenterX = wx - (mouseX - mapMidScreenX()) / pixelsPerBlock;
-		viewCenterZ = wz - (mouseY - mapMidScreenY()) / pixelsPerBlock;
+		viewCenterX = wx - (mouseX - mapMidScreenX()) / (double) pixelsPerBlock;
+		viewCenterZ = wz - (mouseY - mapMidScreenY()) / (double) pixelsPerBlock;
 	}
 
 	@Override
 	public boolean mouseScrolled(double mouseX, double mouseY, double scrollX, double scrollY) {
 		if (isOverMap(mouseX, mouseY) && scrollY != 0) {
-			double factor = scrollY > 0 ? 1.12 : 1 / 1.12;
-			zoomAtScreenPoint(mouseX, mouseY, factor);
+			long rounded = Math.round(scrollY);
+			int delta = rounded == 0
+				? (scrollY > 0 ? 1 : -1)
+				: Mth.clamp((int) rounded, -MAX_PIXELS_PER_BLOCK, MAX_PIXELS_PER_BLOCK);
+			zoomAtScreenPoint(mouseX, mouseY, delta);
 			return true;
 		}
 		return super.mouseScrolled(mouseX, mouseY, scrollX, scrollY);
@@ -229,8 +248,8 @@ public class PackageSpidermonScreen extends AbstractContainerScreen<PackageSpide
 	@Override
 	public boolean mouseDragged(double mouseX, double mouseY, int button, double dragX, double dragY) {
 		if (draggingMap && button == 0) {
-			viewCenterX -= dragX / pixelsPerBlock;
-			viewCenterZ -= dragY / pixelsPerBlock;
+			viewCenterX -= dragX / (double) pixelsPerBlock;
+			viewCenterZ -= dragY / (double) pixelsPerBlock;
 			return true;
 		}
 		return super.mouseDragged(mouseX, mouseY, button, dragX, dragY);
@@ -250,8 +269,9 @@ public class PackageSpidermonScreen extends AbstractContainerScreen<PackageSpide
 
 		guiGraphics.enableScissor(ml, mt, ml + mw, mt + mh);
 
-		PackageSpidermonBlockEntity be = menu.blockEntity;
+		PackageSpidermonBlockEntity be = menu.contentHolder;
 		if (be != null) {
+			BlockPos term = be.getBlockPos();
 			for (MapEdge edge : chainEdges) {
 				int x0 = screenXFromWorld(edge.a().getX() + 0.5);
 				int y0 = screenYFromWorld(edge.a().getZ() + 0.5);
@@ -287,7 +307,6 @@ public class PackageSpidermonScreen extends AbstractContainerScreen<PackageSpide
 				}
 			}
 
-			BlockPos term = be.getBlockPos();
 			int tx = screenXFromWorld(term.getX() + 0.5);
 			int ty = screenYFromWorld(term.getZ() + 0.5);
 			guiGraphics.fill(tx - TERMINAL_SIZE_PX + 1, ty - TERMINAL_SIZE_PX + 1, tx + TERMINAL_SIZE_PX, ty + TERMINAL_SIZE_PX, TERMINAL_COLOR);
@@ -355,6 +374,9 @@ public class PackageSpidermonScreen extends AbstractContainerScreen<PackageSpide
 
 	@Override
 	public void render(GuiGraphics guiGraphics, int mouseX, int mouseY, float partialTick) {
+		if (minecraft != null)
+			PackageSpidermonTargetSelectionHandler.renderPackageSpidermonScreenChainParticles(minecraft,
+				menu.contentHolder, partialTick);
 		super.render(guiGraphics, mouseX, mouseY, partialTick);
 		List<Component> hover = pickMapHoverTooltip(mouseX, mouseY);
 		if (!hover.isEmpty())
@@ -364,7 +386,7 @@ public class PackageSpidermonScreen extends AbstractContainerScreen<PackageSpide
 	private List<Component> pickMapHoverTooltip(int mouseX, int mouseY) {
 		if (!isOverMap(mouseX, mouseY) || draggingMap)
 			return List.of();
-		PackageSpidermonBlockEntity be = menu.blockEntity;
+		PackageSpidermonBlockEntity be = menu.contentHolder;
 		if (be == null)
 			return List.of();
 
@@ -385,8 +407,9 @@ public class PackageSpidermonScreen extends AbstractContainerScreen<PackageSpide
 					p.getX(), p.getY(), p.getZ());
 				if (filter.isEmpty())
 					return List.of(location,
-						Component.translatable("spidermon.screen.map_tooltip_frogport_empty"));
-				return List.of(location, Component.literal(filter));
+						Component.translatable("spidermon.screen.map_tooltip_frogport_empty")
+							.withStyle(ChatFormatting.AQUA).withStyle(ChatFormatting.ITALIC));
+				return List.of(location, Component.literal(filter).withStyle(ChatFormatting.AQUA));
 			}
 		}
 
@@ -562,11 +585,13 @@ public class PackageSpidermonScreen extends AbstractContainerScreen<PackageSpide
 	@Override
 	protected void renderLabels(GuiGraphics guiGraphics, int mouseX, int mouseY) {
 		guiGraphics.drawCenteredString(font, this.title, imageWidth / 2, TITLE_TOP, TITLE_COLOR);
-		guiGraphics.drawCenteredString(font,
-			Component.translatable("spidermon.screen.map_hint"),
-			imageWidth / 2,
-			imageHeight - 14,
-			HINT_COLOR);
+		int bottomY = imageHeight - BOTTOM_HINT_Y;
+		Component hintLeft = Component.translatable("spidermon.screen.map_hint_left");
+		String zoomText = Integer.toString(pixelsPerBlock);
+		Component hintRight = Component.translatable("spidermon.screen.map_hint_right", zoomText);
+		guiGraphics.drawString(font, hintLeft, BOTTOM_HINT_PAD, bottomY, HINT_COLOR, false);
+		int rightX = imageWidth - BOTTOM_HINT_PAD - font.width(hintRight);
+		guiGraphics.drawString(font, hintRight, rightX, bottomY, HINT_COLOR, false);
 	}
 
 	private record MapEdge(BlockPos a, BlockPos b) {
