@@ -18,15 +18,10 @@ import net.minecraft.util.Mth;
 import net.minecraft.world.phys.Vec3;
 
 public class PackageSpidermonVisual extends AbstractBlockEntityVisual<PackageSpidermonBlockEntity> implements SimpleDynamicVisual {
-	private final TransformedInstance body;
-	private TransformedInstance head;
-	private final TransformedInstance tongue;
+	private TransformedInstance body;
 
 	private final Matrix4f basePose = new Matrix4f();
 	private float lastYaw = Float.NaN;
-	private float lastHeadPitch = Float.NaN;
-	private float lastTonguePitch = Float.NaN;
-	private float lastTongueLength = Float.NaN;
 	private boolean lastGoggles = false;
 
 	public PackageSpidermonVisual(VisualizationContext ctx, PackageSpidermonBlockEntity blockEntity, float partialTick) {
@@ -34,14 +29,6 @@ public class PackageSpidermonVisual extends AbstractBlockEntityVisual<PackageSpi
 
 		body = ctx.instancerProvider()
 			.instancer(InstanceTypes.TRANSFORMED, Models.partial(PackageSpidermonPartialModels.PACKAGE_SPIDERMON_BODY))
-			.createInstance();
-
-		head = ctx.instancerProvider()
-			.instancer(InstanceTypes.TRANSFORMED, Models.partial(PackageSpidermonPartialModels.PACKAGE_SPIDERMON_HEAD))
-			.createInstance();
-
-		tongue = ctx.instancerProvider()
-			.instancer(InstanceTypes.TRANSFORMED, Models.partial(PackageSpidermonPartialModels.PACKAGE_SPIDERMON_TONGUE))
 			.createInstance();
 
 		animate(partialTick);
@@ -95,49 +82,24 @@ public class PackageSpidermonVisual extends AbstractBlockEntityVisual<PackageSpi
 				.translate(8 / 16f, 10 / 16f, 11 / 16f);
 
 			lastYaw = yaw;
-
-			lastTonguePitch = Float.NaN;
-			lastHeadPitch = Float.NaN;
-		}
-
-		if (headPitch != lastHeadPitch) {
-			head.setTransform(basePose)
-				.rotateXDegrees(headPitch)
-				.translateBack(8 / 16f, 10 / 16f, 11 / 16f)
-				.setChanged();
-
-			lastHeadPitch = headPitch;
-		}
-
-		if (tonguePitch != lastTonguePitch || tongueLength != lastTongueLength) {
-			tongue.setTransform(basePose)
-				.rotateXDegrees(tonguePitch)
-				.scale(1f, 1f, tongueLength / (7 / 16f))
-				.translateBack(8 / 16f, 10 / 16f, 11 / 16f)
-				.setChanged();
-
-			lastTonguePitch = tonguePitch;
-			lastTongueLength = tongueLength;
 		}
 	}
 
 	public void updateGoggles() {
 		if (blockEntity.goggles && !lastGoggles) {
-			head.delete();
-			head = instancerProvider()
-				.instancer(InstanceTypes.TRANSFORMED, Models.partial(PackageSpidermonPartialModels.PACKAGE_SPIDERMON_SPIDERMON_HEAD_GOGGLES))
+			body.delete();
+			body = instancerProvider()
+				.instancer(InstanceTypes.TRANSFORMED, Models.partial(PackageSpidermonPartialModels.PACKAGE_SPIDERMON_GOGGLES))
 				.createInstance();
-			lastHeadPitch = -1;
 			updateLight(0);
 			lastGoggles = true;
 		}
 
 		if (!blockEntity.goggles && lastGoggles) {
-			head.delete();
-			head = instancerProvider()
-				.instancer(InstanceTypes.TRANSFORMED, Models.partial(PackageSpidermonPartialModels.PACKAGE_SPIDERMON_HEAD))
+			body.delete();
+			body = instancerProvider()
+				.instancer(InstanceTypes.TRANSFORMED, Models.partial(PackageSpidermonPartialModels.PACKAGE_SPIDERMON_BODY))
 				.createInstance();
-			lastHeadPitch = -1;
 			updateLight(0);
 			lastGoggles = false;
 		}
@@ -146,18 +108,15 @@ public class PackageSpidermonVisual extends AbstractBlockEntityVisual<PackageSpi
 	@Override
 	public void collectCrumblingInstances(Consumer<@Nullable Instance> consumer) {
 		consumer.accept(body);
-		consumer.accept(head);
 	}
 
 	@Override
 	public void updateLight(float partialTick) {
-		relight(body, head, tongue);
+		relight(body);
 	}
 
 	@Override
 	protected void _delete() {
 		body.delete();
-		head.delete();
-		tongue.delete();
 	}
 }

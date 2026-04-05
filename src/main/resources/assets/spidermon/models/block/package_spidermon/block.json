@@ -1,8 +1,8 @@
 {
 	"credit": "Made with Blockbench",
 	"textures": {
-		"0": "create:block/port2",
-		"particle": "create:block/vault/vault_top_small"
+		"0": "spidermon:block/monitor2",
+		"particle": "create:block/industrial_iron_block_top"
 	},
 	"elements": [
 		{

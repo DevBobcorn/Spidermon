@@ -31,13 +31,28 @@ import net.minecraft.world.phys.shapes.VoxelShape;
 
 public class PackageSpidermonBlock extends Block implements IBE<PackageSpidermonBlockEntity>, IWrenchable {
 
+	// Static Block Shapes
+	public static final VoxelShape PACKAGE_MONITOR = shape(0, 0, 0, 16, 4, 16).add(4, 2, 4, 12, 11, 12).build();
+
+	private static AllShapes.Builder shape(double x1, double y1, double z1, double x2, double y2, double z2) {
+		return shape(cuboid(x1, y1, z1, x2, y2, z2));
+	}
+
+	private static AllShapes.Builder shape(VoxelShape shape) {
+		return new AllShapes.Builder(shape);
+	}
+
+	private static VoxelShape cuboid(double x1, double y1, double z1, double x2, double y2, double z2) {
+		return Block.box(x1, y1, z1, x2, y2, z2);
+	}
+
 	public PackageSpidermonBlock(Properties pProperties) {
 		super(pProperties);
 	}
 
 	@Override
 	public VoxelShape getShape(BlockState pState, BlockGetter pLevel, BlockPos pPos, CollisionContext pContext) {
-		return AllShapes.PACKAGE_PORT;
+		return PACKAGE_MONITOR;
 	}
 
 	@Override
