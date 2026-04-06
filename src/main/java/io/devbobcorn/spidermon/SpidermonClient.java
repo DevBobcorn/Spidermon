@@ -5,6 +5,7 @@ import io.devbobcorn.spidermon.client.PackageSpidermonRenderer;
 import io.devbobcorn.spidermon.client.PackageSpidermonScreen;
 import io.devbobcorn.spidermon.client.PackageSpidermonTargetSelectionHandler;
 import io.devbobcorn.spidermon.client.PackageSpidermonVisual;
+import io.devbobcorn.spidermon.compat.xaero.XaeroChainMap;
 
 import dev.engine_room.flywheel.lib.visualization.SimpleBlockEntityVisualizer;
 import net.minecraft.client.Minecraft;
@@ -14,6 +15,7 @@ import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.ModContainer;
 import net.neoforged.fml.common.Mod;
 import net.neoforged.fml.event.lifecycle.FMLClientSetupEvent;
+import net.neoforged.fml.loading.LoadingModList;
 import net.neoforged.neoforge.client.event.ClientTickEvent;
 import net.neoforged.neoforge.client.event.EntityRenderersEvent;
 import net.neoforged.neoforge.client.event.RegisterMenuScreensEvent;
@@ -23,7 +25,11 @@ import net.neoforged.neoforge.common.NeoForge;
 
 @Mod(value = SpidermonMod.MODID, dist = Dist.CLIENT)
 public class SpidermonClient {
+    private static final boolean XAERO_LOADED = LoadingModList.get().getModFileById("xaeroworldmap") != null;
+
     public SpidermonClient(IEventBus modEventBus, ModContainer container) {
+        SpidermonMod.LOGGER.info("[Spidermon] Xaero's World Map detected: {}", XAERO_LOADED);
+
         container.registerExtensionPoint(IConfigScreenFactory.class, ConfigurationScreen::new);
 
         PackageSpidermonPartialModels.init();
@@ -51,6 +57,12 @@ public class SpidermonClient {
         if (mc.level == null || mc.player == null)
             return;
         PackageSpidermonTargetSelectionHandler.tick();
+        if (XAERO_LOADED)
+            tickXaeroChainMap();
+    }
+
+    private static void tickXaeroChainMap() {
+        XaeroChainMap.tick();
     }
 
     static void registerScreens(RegisterMenuScreensEvent event) {

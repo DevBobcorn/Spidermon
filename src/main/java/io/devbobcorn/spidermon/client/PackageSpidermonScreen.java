@@ -39,13 +39,18 @@ public class PackageSpidermonScreen extends AbstractContainerScreen<PackageSpide
 	private static final int BORDER_COLOR = 0xFF9ede73;
 	private static final int TITLE_COLOR = 0x9ede73;
 	private static final int HINT_COLOR = 0x888888;
-	private static final int EDGE_COLOR = 0xFF4a6a3a;
-	private static final int CONVEYOR_COLOR = 0xFF6eb8d4;
-	private static final int CONVEYOR_LOOPING_COLOR = 0xFFe066b3;
-	private static final int FROGPORT_COLOR = 0xFF0d2d6e;
+
+	private static final int EDGE_COLOR = ChainMapColors.EDGE_COLOR;
+	private static final int EDGE_OUTLINE_COLOR = ChainMapColors.EDGE_OUTLINE_COLOR;
+	private static final int CONVEYOR_COLOR = ChainMapColors.CONVEYOR_COLOR;
+	private static final int CONVEYOR_OUTLINE_COLOR = ChainMapColors.CONVEYOR_OUTLINE_COLOR;
+	private static final int CONVEYOR_LOOPING_COLOR = ChainMapColors.CONVEYOR_LOOPING_COLOR;
+	private static final int CONVEYOR_LOOPING_OUTLINE_COLOR = ChainMapColors.CONVEYOR_LOOPING_OUTLINE_COLOR;
+	private static final int TRAVEL_PACKAGE_DOT_COLOR = ChainMapColors.PACKAGE_COLOR;
+	private static final int FROGPORT_COLOR = ChainMapColors.FROGPORT_COLOR;
 	private static final int FROGPORT_LABEL_COLOR = 0xFFb8c8e8;
-	private static final int TERMINAL_COLOR = 0xFFe8c84a;
-	private static final int TRAVEL_PACKAGE_DOT_COLOR = 0xFFFFFFFF;
+
+	private static final int SPIDERMON_COLOR = 0xFF6a6a6a;
 
 	private static final int MAP_PADDING = 6;
 	private static final int TITLE_TOP = 6;
@@ -57,7 +62,7 @@ public class PackageSpidermonScreen extends AbstractContainerScreen<PackageSpide
 	private static final int MAX_PIXELS_PER_BLOCK = 16;
 	private static final int TERMINAL_SIZE_PX = 3;
 	private static final int FROGPORT_SIZE_PX = 3;
-	private static final int CONVEYOR_SIZE_PX = 4;
+	private static final int CONVEYOR_SIZE_PX = 5;
 	/** Minimum gap between a frogport label box and other map obstacles (not chain edges). */
 	private static final int FROGPORT_LABEL_OBSTACLE_PAD = 2;
 	private static final double CHAIN_HOVER_PX = 3.0;
@@ -282,11 +287,27 @@ public class PackageSpidermonScreen extends AbstractContainerScreen<PackageSpide
 				int y0 = screenYFromWorld(edge.a().getZ() + 0.5);
 				int x1 = screenXFromWorld(edge.b().getX() + 0.5);
 				int y1 = screenYFromWorld(edge.b().getZ() + 0.5);
-				drawLine(guiGraphics, x0, y0, x1, y1, EDGE_COLOR);
+				drawLine(guiGraphics, x0, y0, x1, y1, EDGE_OUTLINE_COLOR, 1);
+			}
+			for (MapEdge edge : chainEdges) {
+				int x0 = screenXFromWorld(edge.a().getX() + 0.5);
+				int y0 = screenYFromWorld(edge.a().getZ() + 0.5);
+				int x1 = screenXFromWorld(edge.b().getX() + 0.5);
+				int y1 = screenYFromWorld(edge.b().getZ() + 0.5);
+				drawLine(guiGraphics, x0, y0, x1, y1, EDGE_COLOR, 0);
 			}
 
 			List<IntRect> labelObstacles = new ArrayList<>(
 				connectedConveyors.size() + networkFrogports.size() + 32);
+			for (BlockPos p : connectedConveyors) {
+				int cx = screenXFromWorld(p.getX() + 0.5);
+				int cy = screenYFromWorld(p.getZ() + 0.5);
+				int convColor = CONVEYOR_OUTLINE_COLOR;
+				if (be.getLevel().getBlockEntity(p) instanceof ChainConveyorBlockEntity ccbe
+					&& !ccbe.getLoopingPackages().isEmpty())
+					convColor = CONVEYOR_LOOPING_OUTLINE_COLOR;
+				guiGraphics.fill(cx - CONVEYOR_SIZE_PX, cy - CONVEYOR_SIZE_PX, cx + CONVEYOR_SIZE_PX + 1, cy + CONVEYOR_SIZE_PX + 1, convColor);
+			}
 			for (BlockPos p : connectedConveyors) {
 				int cx = screenXFromWorld(p.getX() + 0.5);
 				int cy = screenYFromWorld(p.getZ() + 0.5);
@@ -342,7 +363,7 @@ public class PackageSpidermonScreen extends AbstractContainerScreen<PackageSpide
 				}
 			}
 
-			guiGraphics.fill(txPre - TERMINAL_SIZE_PX + 1, tyPre - TERMINAL_SIZE_PX + 1, txPre + TERMINAL_SIZE_PX, tyPre + TERMINAL_SIZE_PX, TERMINAL_COLOR);
+			guiGraphics.fill(txPre - TERMINAL_SIZE_PX + 1, tyPre - TERMINAL_SIZE_PX + 1, txPre + TERMINAL_SIZE_PX, tyPre + TERMINAL_SIZE_PX, SPIDERMON_COLOR);
 		}
 
 		guiGraphics.disableScissor();
@@ -454,7 +475,7 @@ public class PackageSpidermonScreen extends AbstractContainerScreen<PackageSpide
 		return s + ellipsis;
 	}
 
-	private static void drawLine(GuiGraphics g, int x0, int y0, int x1, int y1, int color) {
+	private static void drawLine(GuiGraphics g, int x0, int y0, int x1, int y1, int color, int pad) {
 		int dx = Math.abs(x1 - x0);
 		int dy = Math.abs(y1 - y0);
 		int sx = x0 < x1 ? 1 : -1;
@@ -463,7 +484,7 @@ public class PackageSpidermonScreen extends AbstractContainerScreen<PackageSpide
 		int x = x0;
 		int y = y0;
 		while (true) {
-			g.fill(x, y, x + 1, y + 1, color);
+			g.fill(x - pad, y - pad, x + 1 + pad, y + 1 + pad, color);
 			if (x == x1 && y == y1)
 				break;
 			int e2 = 2 * err;

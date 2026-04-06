@@ -36,6 +36,8 @@ repositories {
     }
     maven { url = 'https://maven.createmod.net' }
     maven { url = 'https://maven.ithundxr.dev/snapshots' }
+    maven { url = 'https://www.cursemaven.com' }
+    maven { url = 'https://chocolateminecraft.com/maven' } // Xaero
 }
 
 base {
@@ -135,6 +137,12 @@ dependencies {
     // Create — runtime (from Modrinth release JAR, includes all JiJ'd deps)
     def createMrVersion = "mc${create_minecraft_version}-${create_mod_version}"
     localRuntime "maven.modrinth:${create_mod_id}:${createMrVersion}"
+
+    // Xaero's World Map (optional compat)
+    compileOnly "xaero.lib:xaerolib-neoforge-1.21:${xaerolib_version}"
+    compileOnly "curse.maven:xaeros-world-map-317780:${xaero_worldmap_curse_file}"
+    localRuntime "xaero.lib:xaerolib-neoforge-1.21:${xaerolib_version}"
+    localRuntime "curse.maven:xaeros-world-map-317780:${xaero_worldmap_curse_file}"
 
     // Example optional mod dependency with JEI
     // The JEI API is declared for compile time use, while the full JEI artifact is used at runtime
