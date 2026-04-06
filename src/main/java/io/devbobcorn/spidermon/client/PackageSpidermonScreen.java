@@ -1,7 +1,9 @@
 package io.devbobcorn.spidermon.client;
 
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -18,6 +20,7 @@ import net.minecraft.ChatFormatting;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
+import net.minecraft.client.resources.language.I18n;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.MutableComponent;
@@ -50,11 +53,13 @@ public class PackageSpidermonScreen extends AbstractContainerScreen<PackageSpide
 	private static final int MAP_BOTTOM_PAD = 22;
 	private static final int BOTTOM_HINT_PAD = 6;
 	private static final int BOTTOM_HINT_Y = 14;
-	private static final int MIN_PIXELS_PER_BLOCK = 2;
+	private static final int MIN_PIXELS_PER_BLOCK = 1;
 	private static final int MAX_PIXELS_PER_BLOCK = 16;
 	private static final int TERMINAL_SIZE_PX = 3;
 	private static final int FROGPORT_SIZE_PX = 3;
 	private static final int CONVEYOR_SIZE_PX = 4;
+	/** Minimum gap between a frogport label box and other map obstacles (not chain edges). */
+	private static final int FROGPORT_LABEL_OBSTACLE_PAD = 2;
 	private static final double CHAIN_HOVER_PX = 3.0;
 	private static final double CHAIN_HOVER_PX_SQ = CHAIN_HOVER_PX * CHAIN_HOVER_PX;
 	/** Spaces before looping-package destination and content lines (under the package title). */
@@ -280,11 +285,12 @@ public class PackageSpidermonScreen extends AbstractContainerScreen<PackageSpide
 				drawLine(guiGraphics, x0, y0, x1, y1, EDGE_COLOR);
 			}
 
-			drawTravelingPackageDots(be, guiGraphics);
-
+			List<IntRect> labelObstacles = new ArrayList<>(
+				connectedConveyors.size() + networkFrogports.size() + 32);
 			for (BlockPos p : connectedConveyors) {
 				int cx = screenXFromWorld(p.getX() + 0.5);
 				int cy = screenYFromWorld(p.getZ() + 0.5);
+				labelObstacles.add(conveyorMarkerRect(cx, cy));
 				int convColor = CONVEYOR_COLOR;
 				if (be.getLevel().getBlockEntity(p) instanceof ChainConveyorBlockEntity ccbe
 					&& !ccbe.getLoopingPackages().isEmpty())
@@ -292,30 +298,62 @@ public class PackageSpidermonScreen extends AbstractContainerScreen<PackageSpide
 				guiGraphics.fill(cx - CONVEYOR_SIZE_PX + 1, cy - CONVEYOR_SIZE_PX + 1, cx + CONVEYOR_SIZE_PX, cy + CONVEYOR_SIZE_PX, convColor);
 			}
 
-			for (NetworkFrogport fp : networkFrogports) {
-				BlockPos p = fp.pos();
-				int fx = screenXFromWorld(p.getX() + 0.5);
-				int fy = screenYFromWorld(p.getZ() + 0.5);
+			int txPre = screenXFromWorld(term.getX() + 0.5);
+			int tyPre = screenYFromWorld(term.getZ() + 0.5);
+			labelObstacles.add(terminalMarkerRect(txPre, tyPre));
+
+			Set<MapColumn> frogportColumns = new HashSet<>();
+			for (NetworkFrogport fp : networkFrogports)
+				frogportColumns.add(MapColumn.of(fp.pos()));
+			for (MapColumn col : frogportColumns) {
+				int fx = screenXFromWorld(col.x + 0.5);
+				int fy = screenYFromWorld(col.z + 0.5);
+				labelObstacles.add(frogportMarkerRect(fx, fy));
+			}
+
+			drawTravelingPackageDots(be, guiGraphics, labelObstacles);
+
+			int mapRight = ml + mw;
+			int mapBottom = mt + mh;
+			List<IntRect> placedFrogportLabels = new ArrayList<>(frogportColumns.size());
+			Map<MapColumn, List<NetworkFrogport>> frogportGroups = frogportsByMapColumn();
+			List<MapColumn> columnsSorted = new ArrayList<>(frogportGroups.keySet());
+			columnsSorted.sort(Comparator.comparingInt((MapColumn c) -> c.z).thenComparingInt(c -> c.x));
+
+			for (MapColumn col : columnsSorted) {
+				List<NetworkFrogport> group = frogportGroups.get(col);
+				int fx = screenXFromWorld(col.x + 0.5);
+				int fy = screenYFromWorld(col.z + 0.5);
 				guiGraphics.fill(fx - FROGPORT_SIZE_PX + 1, fy - FROGPORT_SIZE_PX + 1, fx + FROGPORT_SIZE_PX, fy + FROGPORT_SIZE_PX, FROGPORT_COLOR);
-				String filter = fp.addressFilter();
-				int textX = fx + 4;
-				int maxTextW = ml + mw - textX - 2;
-				if (maxTextW > 8 && !filter.isEmpty()) {
-					String clipped = truncateLabelToWidth(font, filter, maxTextW);
-					int textY = fy - font.lineHeight / 2 + 1;
-					guiGraphics.drawString(font, clipped, textX, textY, FROGPORT_LABEL_COLOR, false);
+				if (!group.stream().anyMatch(fp -> !fp.addressFilter().isEmpty()))
+					continue;
+				int maxLabelW = mw - 4;
+				if (maxLabelW <= 8)
+					continue;
+				String mergedLabel = mergedFrogportInlineLabel(group);
+				String clipped = truncateLabelToWidth(font, mergedLabel, maxLabelW);
+				int textW = font.width(clipped);
+				if (textW <= 0)
+					continue;
+				int[] pos = pickFrogportLabelPos(font, fx, fy, textW, labelObstacles, placedFrogportLabels, ml, mt, mapRight, mapBottom);
+				if (pos != null) {
+					guiGraphics.drawString(font, clipped, pos[0], pos[1], FROGPORT_LABEL_COLOR, false);
+					placedFrogportLabels.add(frogportLabelBounds(pos[0], pos[1], textW, font));
 				}
 			}
 
-			int tx = screenXFromWorld(term.getX() + 0.5);
-			int ty = screenYFromWorld(term.getZ() + 0.5);
-			guiGraphics.fill(tx - TERMINAL_SIZE_PX + 1, ty - TERMINAL_SIZE_PX + 1, tx + TERMINAL_SIZE_PX, ty + TERMINAL_SIZE_PX, TERMINAL_COLOR);
+			guiGraphics.fill(txPre - TERMINAL_SIZE_PX + 1, tyPre - TERMINAL_SIZE_PX + 1, txPre + TERMINAL_SIZE_PX, tyPre + TERMINAL_SIZE_PX, TERMINAL_COLOR);
 		}
 
 		guiGraphics.disableScissor();
 	}
 
-	private void drawTravelingPackageDots(PackageSpidermonBlockEntity be, GuiGraphics guiGraphics) {
+	/**
+	 * Draws traveling-package dots. When {@code labelObstacles} is non-null, appends each dot's screen rect so
+	 * frogport labels can avoid covering them.
+	 */
+	private void drawTravelingPackageDots(PackageSpidermonBlockEntity be, GuiGraphics guiGraphics,
+		List<IntRect> labelObstacles) {
 		Level level = be.getLevel();
 		if (level == null)
 			return;
@@ -331,9 +369,77 @@ public class PackageSpidermonScreen extends AbstractContainerScreen<PackageSpide
 					int px = Mth.floor(mapMidScreenX() + (pos.x - viewCenterX) * pixelsPerBlock);
 					int py = Mth.floor(mapMidScreenY() + (pos.z - viewCenterZ) * pixelsPerBlock);
 					guiGraphics.fill(px, py, px + 2, py + 2, TRAVEL_PACKAGE_DOT_COLOR);
+					if (labelObstacles != null)
+						labelObstacles.add(new IntRect(px, py, px + 2, py + 2));
 				}
 			}
 		}
+	}
+
+	private static IntRect conveyorMarkerRect(int cx, int cy) {
+		return new IntRect(cx - CONVEYOR_SIZE_PX + 1, cy - CONVEYOR_SIZE_PX + 1, cx + CONVEYOR_SIZE_PX, cy + CONVEYOR_SIZE_PX);
+	}
+
+	private static IntRect terminalMarkerRect(int tx, int ty) {
+		return new IntRect(tx - TERMINAL_SIZE_PX + 1, ty - TERMINAL_SIZE_PX + 1, tx + TERMINAL_SIZE_PX, ty + TERMINAL_SIZE_PX);
+	}
+
+	private static IntRect frogportMarkerRect(int fx, int fy) {
+		return new IntRect(fx - FROGPORT_SIZE_PX + 1, fy - FROGPORT_SIZE_PX + 1, fx + FROGPORT_SIZE_PX, fy + FROGPORT_SIZE_PX);
+	}
+
+	/** Bounds for a single-line string drawn with {@link GuiGraphics#drawString(Font, String, int, int, int, boolean)} (baseline {@code textY}). */
+	private static IntRect frogportLabelBounds(int textX, int textY, int textWidth, Font font) {
+		return new IntRect(textX, textY - font.lineHeight + 1, textX + textWidth, textY + 3);
+	}
+
+	private static boolean rectIntersectsPadded(IntRect a, IntRect b, int pad) {
+		return a.x0 < b.x1 + pad && a.x1 > b.x0 - pad && a.y0 < b.y1 + pad && a.y1 > b.y0 - pad;
+	}
+
+	private static boolean intersectsAny(IntRect rect, List<IntRect> others, int pad) {
+		for (IntRect o : others) {
+			if (rectIntersectsPadded(rect, o, pad))
+				return true;
+		}
+		return false;
+	}
+
+	/**
+	 * Picks screen (textX, textY) for a frogport address label. Returns null if every candidate overlaps map
+	 * bounds, static obstacles, prior labels, or traveling dots. Chain edges are not treated as obstacles.
+	 */
+	private static int[] pickFrogportLabelPos(Font font, int fx, int fy, int textWidth, List<IntRect> obstacles,
+		List<IntRect> placedLabels, int mapLeft, int mapTop, int mapRight, int mapBottom) {
+		int lh = font.lineHeight;
+		int hHalf = lh / 2;
+		int centeredX = fx - (textWidth + 1) / 2;
+		int belowY = fy + FROGPORT_SIZE_PX + lh + 2;
+		int aboveY = fy - lh - FROGPORT_SIZE_PX - 2;
+		int midY = fy - hHalf + 1;
+		int[][] candidates = {
+			{ fx + FROGPORT_SIZE_PX + 3, midY },
+			{ fx - FROGPORT_SIZE_PX - 3 - textWidth, midY },
+			{ centeredX, belowY },
+			{ centeredX, aboveY },
+			{ fx + FROGPORT_SIZE_PX + 3, belowY },
+			{ fx + FROGPORT_SIZE_PX + 3, aboveY },
+			{ fx - FROGPORT_SIZE_PX - 3 - textWidth, belowY },
+			{ fx - FROGPORT_SIZE_PX - 3 - textWidth, aboveY },
+		};
+		for (int[] c : candidates) {
+			int textX = c[0];
+			int textY = c[1];
+			IntRect bounds = frogportLabelBounds(textX, textY, textWidth, font);
+			if (bounds.x0 < mapLeft || bounds.y0 < mapTop || bounds.x1 > mapRight || bounds.y1 > mapBottom)
+				continue;
+			if (intersectsAny(bounds, obstacles, FROGPORT_LABEL_OBSTACLE_PAD))
+				continue;
+			if (intersectsAny(bounds, placedLabels, FROGPORT_LABEL_OBSTACLE_PAD))
+				continue;
+			return new int[] { textX, textY };
+		}
+		return null;
 	}
 
 	private static String truncateLabelToWidth(Font font, String text, int maxWidth) {
@@ -390,34 +496,26 @@ public class PackageSpidermonScreen extends AbstractContainerScreen<PackageSpide
 		BlockPos term = be.getBlockPos();
 		int tx = screenXFromWorld(term.getX() + 0.5);
 		int ty = screenYFromWorld(term.getZ() + 0.5);
-		if (mouseX >= tx - TERMINAL_SIZE_PX + 1 && mouseX < tx + TERMINAL_SIZE_PX && mouseY >= ty - TERMINAL_SIZE_PX + 1 && mouseY < ty + TERMINAL_SIZE_PX)
-			return List.of(Component.translatable("spidermon.screen.map_tooltip_terminal",
-				term.getX(), term.getY(), term.getZ()));
 
-		for (NetworkFrogport fp : networkFrogports) {
-			BlockPos p = fp.pos();
-			int fx = screenXFromWorld(p.getX() + 0.5);
-			int fy = screenYFromWorld(p.getZ() + 0.5);
-			if (mouseX >= fx - FROGPORT_SIZE_PX + 1 && mouseX < fx + FROGPORT_SIZE_PX && mouseY >= fy - FROGPORT_SIZE_PX + 1 && mouseY < fy + FROGPORT_SIZE_PX) {
-				String filter = fp.addressFilter();
-				Component location = Component.translatable("spidermon.screen.map_tooltip_frogport_location",
-					p.getX(), p.getY(), p.getZ());
-				if (filter.isEmpty())
-					return List.of(location,
-						Component.translatable("spidermon.screen.map_tooltip_frogport_empty")
-							.withStyle(ChatFormatting.AQUA).withStyle(ChatFormatting.ITALIC));
-				return List.of(location, Component.literal(filter).withStyle(ChatFormatting.AQUA));
-			}
-		}
+		boolean terminalHit = mouseInTerminalMarker(mouseX, mouseY, tx, ty);
 
+		List<BlockPos> conveyorHits = new ArrayList<>();
 		for (BlockPos p : connectedConveyors) {
-			int cx = screenXFromWorld(p.getX() + 0.5);
-			int cy = screenYFromWorld(p.getZ() + 0.5);
-			if (mouseX >= cx - CONVEYOR_SIZE_PX + 1 && mouseX < cx + CONVEYOR_SIZE_PX && mouseY >= cy - CONVEYOR_SIZE_PX + 1 && mouseY < cy + CONVEYOR_SIZE_PX) {
-				ChainConveyorBlockEntity ccbe = be.getLevel().getBlockEntity(p) instanceof ChainConveyorBlockEntity c ? c : null;
-				return conveyorHoverLines(p, ccbe);
-			}
+			if (mouseInConveyorMarker(mouseX, mouseY, p))
+				conveyorHits.add(p);
 		}
+		conveyorHits.sort(Comparator.<BlockPos>comparingLong(p -> p.getY()).thenComparingLong(p -> p.getX()));
+
+		List<NetworkFrogport> frogportHits = new ArrayList<>();
+		for (NetworkFrogport fp : networkFrogports) {
+			if (mouseInFrogportMarker(mouseX, mouseY, fp.pos()))
+				frogportHits.add(fp);
+		}
+		frogportHits.sort(Comparator.comparingLong((NetworkFrogport f) -> f.pos().getY())
+			.thenComparingLong(f -> f.pos().getX()));
+
+		if (terminalHit || !conveyorHits.isEmpty() || !frogportHits.isEmpty())
+			return buildCombinedMapTooltip(be, terminalHit, conveyorHits, frogportHits);
 
 		double mx = mouseX + 0.5;
 		double my = mouseY + 0.5;
@@ -431,6 +529,94 @@ public class PackageSpidermonScreen extends AbstractContainerScreen<PackageSpide
 		}
 
 		return List.of();
+	}
+
+	private static boolean mouseInTerminalMarker(int mouseX, int mouseY, int tx, int ty) {
+		return mouseX >= tx - TERMINAL_SIZE_PX + 1 && mouseX < tx + TERMINAL_SIZE_PX
+			&& mouseY >= ty - TERMINAL_SIZE_PX + 1 && mouseY < ty + TERMINAL_SIZE_PX;
+	}
+
+	private boolean mouseInConveyorMarker(int mouseX, int mouseY, BlockPos p) {
+		int cx = screenXFromWorld(p.getX() + 0.5);
+		int cy = screenYFromWorld(p.getZ() + 0.5);
+		return mouseX >= cx - CONVEYOR_SIZE_PX + 1 && mouseX < cx + CONVEYOR_SIZE_PX
+			&& mouseY >= cy - CONVEYOR_SIZE_PX + 1 && mouseY < cy + CONVEYOR_SIZE_PX;
+	}
+
+	private boolean mouseInFrogportMarker(int mouseX, int mouseY, BlockPos p) {
+		int fx = screenXFromWorld(p.getX() + 0.5);
+		int fy = screenYFromWorld(p.getZ() + 0.5);
+		return mouseX >= fx - FROGPORT_SIZE_PX + 1 && mouseX < fx + FROGPORT_SIZE_PX
+			&& mouseY >= fy - FROGPORT_SIZE_PX + 1 && mouseY < fy + FROGPORT_SIZE_PX;
+	}
+
+	private List<Component> buildCombinedMapTooltip(PackageSpidermonBlockEntity be, boolean terminalHit,
+		List<BlockPos> conveyorHits, List<NetworkFrogport> frogportHits) {
+		List<Component> lines = new ArrayList<>();
+		BlockPos term = be.getBlockPos();
+		if (terminalHit) {
+			lines.add(Component.translatable("spidermon.screen.map_tooltip_terminal",
+				term.getX(), term.getY(), term.getZ()));
+		}
+		Level level = be.getLevel();
+		if (!conveyorHits.isEmpty()) {
+			if (!lines.isEmpty())
+				lines.add(Component.empty());
+			boolean firstConv = true;
+			for (BlockPos p : conveyorHits) {
+				if (!firstConv)
+					lines.add(Component.empty());
+				firstConv = false;
+				ChainConveyorBlockEntity ccbe = level != null && level.getBlockEntity(p) instanceof ChainConveyorBlockEntity c ? c : null;
+				lines.addAll(conveyorHoverLines(p, ccbe));
+			}
+		}
+		if (!frogportHits.isEmpty()) {
+			if (!lines.isEmpty())
+				lines.add(Component.empty());
+			lines.addAll(frogportsHoverTooltipLines(frogportHits));
+		}
+		return lines;
+	}
+
+	private static List<Component> frogportsHoverTooltipLines(List<NetworkFrogport> frogports) {
+		List<Component> lines = new ArrayList<>();
+		boolean first = true;
+		for (NetworkFrogport fp : frogports) {
+			if (!first)
+				lines.add(Component.empty());
+			first = false;
+			BlockPos p = fp.pos();
+			lines.add(Component.translatable("spidermon.screen.map_tooltip_frogport_location",
+				p.getX(), p.getY(), p.getZ()));
+			String filter = fp.addressFilter();
+			if (filter.isEmpty())
+				lines.add(Component.translatable("spidermon.screen.map_tooltip_frogport_empty")
+					.withStyle(ChatFormatting.AQUA).withStyle(ChatFormatting.ITALIC));
+			else
+				lines.add(Component.literal(filter).withStyle(ChatFormatting.AQUA));
+		}
+		return lines;
+	}
+
+	private Map<MapColumn, List<NetworkFrogport>> frogportsByMapColumn() {
+		Map<MapColumn, List<NetworkFrogport>> map = new LinkedHashMap<>();
+		for (NetworkFrogport fp : networkFrogports)
+			map.computeIfAbsent(MapColumn.of(fp.pos()), k -> new ArrayList<NetworkFrogport>()).add(fp);
+		for (List<NetworkFrogport> g : map.values())
+			g.sort(Comparator.comparingLong((NetworkFrogport fp) -> fp.pos().getY())
+				.thenComparingLong(fp -> fp.pos().getX()));
+		return map;
+	}
+
+	private static String mergedFrogportInlineLabel(List<NetworkFrogport> group) {
+		String emptyText = I18n.get("spidermon.screen.map_tooltip_frogport_empty");
+		List<String> parts = new ArrayList<>(group.size());
+		for (NetworkFrogport fp : group) {
+			String f = fp.addressFilter();
+			parts.add(f.isEmpty() ? emptyText : f);
+		}
+		return String.join(", ", parts);
 	}
 
 	private static List<Component> conveyorHoverLines(BlockPos p, ChainConveyorBlockEntity ccbe) {
@@ -592,5 +778,16 @@ public class PackageSpidermonScreen extends AbstractContainerScreen<PackageSpide
 	}
 
 	private record MapEdge(BlockPos a, BlockPos b) {
+	}
+
+	/** World columns that share the same map pixel (X/Z only; Y may differ). */
+	private record MapColumn(int x, int z) {
+		static MapColumn of(BlockPos p) {
+			return new MapColumn(p.getX(), p.getZ());
+		}
+	}
+
+	/** Inclusive min, exclusive max — matches {@link GuiGraphics#fill} pixel ranges. */
+	private record IntRect(int x0, int y0, int x1, int y1) {
 	}
 }

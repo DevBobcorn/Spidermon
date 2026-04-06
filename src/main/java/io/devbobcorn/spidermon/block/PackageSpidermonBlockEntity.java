@@ -177,7 +177,8 @@ public class PackageSpidermonBlockEntity extends SmartBlockEntity implements Men
 
 	/**
 	 * Frogports attached to chain conveyors in the same network as this terminal's target conveyor.
-	 * Map keys are offsets from conveyor to port (Create's {@code loopPorts} / {@code travelPorts} keys).
+	 * Multiple entries at the same {@link BlockPos} are kept when they have distinct address filters
+	 * (e.g. both loop and travel maps reference the same port with different data).
 	 */
 	public List<NetworkFrogport> getNetworkFrogports() {
 		return getNetworkFrogports(getConnectedChainConveyors());
@@ -186,25 +187,30 @@ public class PackageSpidermonBlockEntity extends SmartBlockEntity implements Men
 	public List<NetworkFrogport> getNetworkFrogports(List<BlockPos> conveyors) {
 		if (conveyors.isEmpty() || level == null)
 			return List.of();
-		Map<BlockPos, String> byPos = new LinkedHashMap<>();
+		Map<BlockPos, List<String>> byPos = new LinkedHashMap<>();
 		for (BlockPos conv : conveyors) {
 			if (!(level.getBlockEntity(conv) instanceof ChainConveyorBlockEntity ccbe))
 				continue;
 			mergeFrogportsFromMap(byPos, conv, ccbe.loopPorts);
 			mergeFrogportsFromMap(byPos, conv, ccbe.travelPorts);
 		}
-		List<NetworkFrogport> out = new ArrayList<>(byPos.size());
-		for (Map.Entry<BlockPos, String> e : byPos.entrySet())
-			out.add(new NetworkFrogport(e.getKey(), e.getValue()));
+		List<NetworkFrogport> out = new ArrayList<>();
+		for (Map.Entry<BlockPos, List<String>> e : byPos.entrySet()) {
+			BlockPos pos = e.getKey();
+			for (String filter : e.getValue())
+				out.add(new NetworkFrogport(pos, filter));
+		}
 		return out;
 	}
 
-	private static void mergeFrogportsFromMap(Map<BlockPos, String> out, BlockPos conveyorPos,
+	private static void mergeFrogportsFromMap(Map<BlockPos, List<String>> out, BlockPos conveyorPos,
 		Map<BlockPos, ConnectedPort> ports) {
 		for (Map.Entry<BlockPos, ConnectedPort> e : ports.entrySet()) {
 			BlockPos frogPos = conveyorPos.offset(e.getKey());
-			String filter = e.getValue().filter();
-			out.putIfAbsent(frogPos, filter != null ? filter : "");
+			String filter = e.getValue().filter() != null ? e.getValue().filter() : "";
+			List<String> list = out.computeIfAbsent(frogPos, k -> new ArrayList<>(2));
+			if (!list.contains(filter))
+				list.add(filter);
 		}
 	}
 
