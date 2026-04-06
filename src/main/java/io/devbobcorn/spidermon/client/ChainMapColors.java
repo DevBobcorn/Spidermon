@@ -15,5 +15,10 @@ public final class ChainMapColors {
 	public static final int FROGPORT_COLOR = 0xFF5577cc;
 	public static final int PACKAGE_COLOR = 0xFFFFFFFF;
 
+	public static final int UNLOADED_EDGE_COLOR = 0xFF888888;
+	public static final int UNLOADED_EDGE_OUTLINE_COLOR = 0xFF444444;
+	public static final int UNLOADED_CONVEYOR_COLOR = 0xFFaaaaaa;
+	public static final int UNLOADED_CONVEYOR_OUTLINE_COLOR = 0xFF555555;
+
 	private ChainMapColors() {}
 }

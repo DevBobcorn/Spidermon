@@ -34,6 +34,10 @@ public class XaeroChainMap {
 	private static final int CONVEYOR_LOOPING_OUTLINE_COLOR = ChainMapColors.CONVEYOR_LOOPING_OUTLINE_COLOR;
 	private static final int FROGPORT_COLOR = ChainMapColors.FROGPORT_COLOR;
 	private static final int PACKAGE_COLOR = ChainMapColors.PACKAGE_COLOR;
+	private static final int UNLOADED_EDGE_COLOR = ChainMapColors.UNLOADED_EDGE_COLOR;
+	private static final int UNLOADED_EDGE_OUTLINE_COLOR = ChainMapColors.UNLOADED_EDGE_OUTLINE_COLOR;
+	private static final int UNLOADED_CONVEYOR_COLOR = ChainMapColors.UNLOADED_CONVEYOR_COLOR;
+	private static final int UNLOADED_CONVEYOR_OUTLINE_COLOR = ChainMapColors.UNLOADED_CONVEYOR_OUTLINE_COLOR;
 
 	public static void tick() {
 		if (!isMapOpen(Minecraft.getInstance().screen))
@@ -48,7 +52,7 @@ public class XaeroChainMap {
 	 */
 	public static void onRender(GuiGraphics graphics, GuiMap screen, int mX, int mY, float pt) {
 		ChainMapManager mgr = ChainMapManager.INSTANCE;
-		if (mgr.getConveyorPositions().isEmpty())
+		if (mgr.getConveyorPositions().isEmpty() && mgr.getUnloadedConveyorPositions().isEmpty())
 			return;
 
 		XaeroGuiMapAccessor accessor = (XaeroGuiMapAccessor) screen;
@@ -72,6 +76,8 @@ public class XaeroChainMap {
 
 		overlay.startDrawing();
 
+		drawUnloadedEdges(mgr);
+		drawUnloadedConveyors(mgr);
 		drawEdges(mgr);
 		drawConveyors(mgr);
 		drawFrogports(mgr);
@@ -97,6 +103,31 @@ public class XaeroChainMap {
 				edge.a().getX() + 0.5, edge.a().getZ() + 0.5,
 				edge.b().getX() + 0.5, edge.b().getZ() + 0.5,
 				EDGE_COLOR, 0);
+		}
+	}
+
+	private static void drawUnloadedEdges(ChainMapManager mgr) {
+		for (ChainMapManager.ChainEdge edge : mgr.getUnloadedEdges()) {
+			drawWorldLine(
+				edge.a().getX() + 0.5, edge.a().getZ() + 0.5,
+				edge.b().getX() + 0.5, edge.b().getZ() + 0.5,
+				UNLOADED_EDGE_OUTLINE_COLOR, 1);
+		}
+		for (ChainMapManager.ChainEdge edge : mgr.getUnloadedEdges()) {
+			drawWorldLine(
+				edge.a().getX() + 0.5, edge.a().getZ() + 0.5,
+				edge.b().getX() + 0.5, edge.b().getZ() + 0.5,
+				UNLOADED_EDGE_COLOR, 0);
+		}
+	}
+
+	private static void drawUnloadedConveyors(ChainMapManager mgr) {
+		for (BlockPos pos : mgr.getUnloadedConveyorPositions()) {
+			overlay.setRect(pos.getX() - 1, pos.getZ() - 1, pos.getX() + 1, pos.getZ() + 1,
+				UNLOADED_CONVEYOR_OUTLINE_COLOR);
+		}
+		for (BlockPos pos : mgr.getUnloadedConveyorPositions()) {
+			overlay.setPixel(pos.getX(), pos.getZ(), UNLOADED_CONVEYOR_COLOR);
 		}
 	}
 
