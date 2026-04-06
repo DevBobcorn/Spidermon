@@ -23,7 +23,7 @@ public class PackageSpidermonRenderer extends SmartBlockEntityRenderer<PackageSp
 	protected void renderSafe(PackageSpidermonBlockEntity blockEntity, float partialTicks, PoseStack ms,
 		MultiBufferSource buffer, int light, int overlay) {
 		SuperByteBuffer body = CachedBuffers.partial(
-			blockEntity.goggles ? PackageSpidermonPartialModels.PACKAGE_SPIDERMON_GOGGLES : PackageSpidermonPartialModels.PACKAGE_SPIDERMON_BODY,
+			blockEntity.goggles ? PackageSpidermonPartialModels.PACKAGE_SPIDERMON_BODY_GOGGLES : PackageSpidermonPartialModels.PACKAGE_SPIDERMON_BODY,
 			blockEntity.getBlockState());
 
 		float yaw = blockEntity.getYaw();

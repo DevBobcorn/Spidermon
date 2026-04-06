@@ -15,8 +15,6 @@ import dev.engine_room.flywheel.lib.model.Models;
 import dev.engine_room.flywheel.lib.visual.AbstractBlockEntityVisual;
 import dev.engine_room.flywheel.lib.visual.SimpleDynamicVisual;
 import net.minecraft.client.Minecraft;
-import net.minecraft.util.Mth;
-import net.minecraft.world.phys.Vec3;
 
 public class PackageSpidermonVisual extends AbstractBlockEntityVisual<PackageSpidermonBlockEntity> implements SimpleDynamicVisual {
 	private TransformedInstance body;
@@ -49,32 +47,6 @@ public class PackageSpidermonVisual extends AbstractBlockEntityVisual<PackageSpi
 
 		float yaw = blockEntity.getYaw();
 
-		float headPitch = 80;
-		float tonguePitch = 0;
-		float tongueLength = 0;
-		float headPitchModifier = 0;
-
-		boolean hasTarget = blockEntity.target != null;
-
-		Vec3 diff = Vec3.ZERO;
-
-		if (hasTarget) {
-			diff = blockEntity.getExactTargetLocation()
-				.subtract(0, 0.75, 0)
-				.subtract(Vec3.atCenterOf(blockEntity.getBlockPos()));
-			tonguePitch = (float) Mth.atan2(diff.y, diff.multiply(1, 0, 1)
-				.length() + (3 / 16f)) * Mth.RAD_TO_DEG;
-			tongueLength = Math.max((float) diff.length(), 1);
-			headPitch = Mth.clamp(tonguePitch * 2, 60, 100);
-		}
-
-		tongueLength = 0;
-
-		headPitch *= headPitchModifier;
-
-		headPitch = Math.max(headPitch, blockEntity.manualOpenAnimationProgress.getValue(partialTicks) * 60);
-		tongueLength = Math.max(tongueLength, blockEntity.manualOpenAnimationProgress.getValue(partialTicks) * 0.25f);
-
 		if (yaw != lastYaw) {
 			body.setIdentityTransform()
 				.translate(getVisualPosition())
@@ -94,10 +66,12 @@ public class PackageSpidermonVisual extends AbstractBlockEntityVisual<PackageSpi
 		if (blockEntity.goggles && !lastGoggles) {
 			body.delete();
 			body = instancerProvider()
-				.instancer(InstanceTypes.TRANSFORMED, Models.partial(PackageSpidermonPartialModels.PACKAGE_SPIDERMON_GOGGLES))
+				.instancer(InstanceTypes.TRANSFORMED, Models.partial(PackageSpidermonPartialModels.PACKAGE_SPIDERMON_BODY_GOGGLES))
 				.createInstance();
 			updateLight(0);
 			lastGoggles = true;
+			// New instance has no transform; force animate() to reapply world position and rotation.
+			lastYaw = Float.NaN;
 		}
 
 		if (!blockEntity.goggles && lastGoggles) {
@@ -107,6 +81,7 @@ public class PackageSpidermonVisual extends AbstractBlockEntityVisual<PackageSpi
 				.createInstance();
 			updateLight(0);
 			lastGoggles = false;
+			lastYaw = Float.NaN;
 		}
 	}
 

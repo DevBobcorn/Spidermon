@@ -33,7 +33,7 @@ public class PackageSpidermonTargetSelectionHandler {
 	public static void flushSettings(BlockPos pos) {
 		if (activePackageTarget == null) {
 			Minecraft.getInstance().player.displayClientMessage(
-				Component.translatable("create.package_port.not_targeting_anything"), true);
+				Component.translatable("create.gui.package_port.not_targeting_anything"), true);
 			return;
 		}
 
