@@ -5,6 +5,7 @@ import io.devbobcorn.spidermon.client.PackageSpidermonRenderer;
 import io.devbobcorn.spidermon.client.PackageSpidermonScreen;
 import io.devbobcorn.spidermon.client.PackageSpidermonTargetSelectionHandler;
 import io.devbobcorn.spidermon.client.PackageSpidermonVisual;
+import io.devbobcorn.spidermon.compat.xaero.ChainMapManager;
 import io.devbobcorn.spidermon.compat.xaero.XaeroChainMap;
 
 import dev.engine_room.flywheel.lib.visualization.SimpleBlockEntityVisualizer;
@@ -55,6 +56,8 @@ public class SpidermonClient {
     @SubscribeEvent
     public static void onClientTick(ClientTickEvent.Post event) {
         Minecraft mc = Minecraft.getInstance();
+        if (XAERO_LOADED)
+            ChainMapManager.INSTANCE.ensureClientLevel(mc.level);
         if (mc.level == null || mc.player == null)
             return;
         PackageSpidermonTargetSelectionHandler.tick();

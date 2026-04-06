@@ -42,6 +42,9 @@ public class ChainMapManager {
 	private List<ChainFrogport> frogports = List.of();
 	private long lastRefreshTick = -REFRESH_INTERVAL_TICKS;
 
+	/** Cleared whenever this reference changes (disconnect, dimension, or different server/world). */
+	private ClientLevel clientLevelContext;
+
 	/**
 	 * Persistent cache: maps each known conveyor to its absolute neighbor
 	 * positions. Survives chunk unloads; pruned when the conveyor's chunk is
@@ -54,6 +57,17 @@ public class ChainMapManager {
 	}
 
 	public record ChainFrogport(BlockPos pos, String addressFilter) {
+	}
+
+	/**
+	 * Call once per client tick (before {@link #tick()}) so caches from a previous world, dimension,
+	 * or server are dropped when {@link Minecraft#level} changes or becomes null.
+	 */
+	public void ensureClientLevel(ClientLevel level) {
+		if (clientLevelContext != level) {
+			clear();
+			clientLevelContext = level;
+		}
 	}
 
 	public void tick() {
