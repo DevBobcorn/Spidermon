@@ -18,6 +18,7 @@ import net.neoforged.fml.event.lifecycle.FMLClientSetupEvent;
 import net.neoforged.fml.loading.LoadingModList;
 import net.neoforged.neoforge.client.event.ClientTickEvent;
 import net.neoforged.neoforge.client.event.EntityRenderersEvent;
+import net.neoforged.neoforge.client.event.InputEvent;
 import net.neoforged.neoforge.client.event.RegisterMenuScreensEvent;
 import net.neoforged.neoforge.client.gui.ConfigurationScreen;
 import net.neoforged.neoforge.client.gui.IConfigScreenFactory;
@@ -63,6 +64,16 @@ public class SpidermonClient {
 
     private static void tickXaeroChainMap() {
         XaeroChainMap.tick();
+    }
+
+    @SubscribeEvent
+    public static void onMouseClick(InputEvent.MouseButton.Pre event) {
+        if (XAERO_LOADED)
+            handleXaeroMouseClick(event);
+    }
+
+    private static void handleXaeroMouseClick(InputEvent.MouseButton.Pre event) {
+        XaeroChainMap.mouseClick(event);
     }
 
     static void registerScreens(RegisterMenuScreensEvent event) {

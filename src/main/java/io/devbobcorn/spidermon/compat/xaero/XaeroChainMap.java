@@ -1,30 +1,42 @@
 package io.devbobcorn.spidermon.compat.xaero;
 
+import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 
 import com.mojang.blaze3d.platform.Window;
+import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.simibubi.create.content.kinetics.chainConveyor.ChainConveyorBlockEntity;
 import com.simibubi.create.content.kinetics.chainConveyor.ChainConveyorPackage;
 
 import io.devbobcorn.spidermon.SpidermonMod;
 import io.devbobcorn.spidermon.client.ChainMapColors;
+import io.devbobcorn.spidermon.client.ChainMapTooltips;
+import io.devbobcorn.spidermon.client.SpidermonGuiTextures;
 import io.devbobcorn.spidermon.mixin.compat.xaero.XaeroGuiMapAccessor;
 
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.core.BlockPos;
+import net.minecraft.network.chat.Component;
 import net.minecraft.util.Mth;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.Vec3;
 import xaero.lib.client.gui.ScreenBase;
 import xaero.map.gui.GuiMap;
 
+import net.neoforged.neoforge.client.event.InputEvent;
+
 public class XaeroChainMap {
 	private static boolean encounteredException = false;
 	private static final ChainMapOverlay overlay = new ChainMapOverlay();
+	private static boolean overlayEnabled = true;
+
+	private static final int TOGGLE_X = 3;
+	private static final int TOGGLE_Y = 48;
 
 	private static final int EDGE_COLOR = ChainMapColors.EDGE_COLOR;
 	private static final int EDGE_OUTLINE_COLOR = ChainMapColors.EDGE_OUTLINE_COLOR;
@@ -42,7 +54,32 @@ public class XaeroChainMap {
 	public static void tick() {
 		if (!isMapOpen(Minecraft.getInstance().screen))
 			return;
-		ChainMapManager.INSTANCE.tick();
+		if (overlayEnabled)
+			ChainMapManager.INSTANCE.tick();
+	}
+
+	public static void mouseClick(InputEvent.MouseButton.Pre event) {
+		if (encounteredException)
+			return;
+		if (event.getAction() != org.lwjgl.glfw.GLFW.GLFW_PRESS)
+			return;
+
+		Minecraft mc = Minecraft.getInstance();
+		try {
+			if (!(mc.screen instanceof GuiMap))
+				return;
+		} catch (Throwable e) {
+			SpidermonMod.LOGGER.error("Failed to handle mouseClick for Xaero's World Map chain map integration:", e);
+			encounteredException = true;
+			return;
+		}
+
+		Window window = mc.getWindow();
+		double mX = mc.mouseHandler.xpos() * window.getGuiScaledWidth() / window.getScreenWidth();
+		double mY = mc.mouseHandler.ypos() * window.getGuiScaledHeight() / window.getScreenHeight();
+
+		if (handleToggleClick(Mth.floor(mX), Mth.floor(mY)))
+			event.setCanceled(true);
 	}
 
 	/**
@@ -52,8 +89,16 @@ public class XaeroChainMap {
 	 */
 	public static void onRender(GuiGraphics graphics, GuiMap screen, int mX, int mY, float pt) {
 		ChainMapManager mgr = ChainMapManager.INSTANCE;
-		if (mgr.getConveyorPositions().isEmpty() && mgr.getUnloadedConveyorPositions().isEmpty())
+
+		if (!overlayEnabled) {
+			renderToggleWidgetAndTooltip(graphics, screen, mX, mY);
 			return;
+		}
+
+		if (mgr.getConveyorPositions().isEmpty() && mgr.getUnloadedConveyorPositions().isEmpty()) {
+			renderToggleWidgetAndTooltip(graphics, screen, mX, mY);
+			return;
+		}
 
 		XaeroGuiMapAccessor accessor = (XaeroGuiMapAccessor) screen;
 		double cameraX = accessor.getCameraX();
@@ -89,7 +134,154 @@ public class XaeroChainMap {
 		graphics.bufferSource().endBatch();
 
 		pose.popPose();
+
+		renderChainMapHoverTooltips(graphics, screen, mgr, mX, mY, cameraX, cameraZ, scale);
+
+		renderToggleWidgetAndTooltip(graphics, screen, mX, mY);
 	}
+
+	/**
+	 * Hover tooltips for overlay elements, matching {@link io.devbobcorn.spidermon.client.PackageSpidermonScreen}
+	 * (conveyors, frogports, chain segments). Uses the same world-to-screen mapping as the overlay draw pass.
+	 */
+	private static void renderChainMapHoverTooltips(GuiGraphics graphics, GuiMap screen, ChainMapManager mgr,
+		int mouseX, int mouseY, double cameraX, double cameraZ, double mapScale) {
+		if (isToggleHovered(mouseX, mouseY))
+			return;
+		Level level = Minecraft.getInstance().level;
+		List<Component> hover = pickChainMapHoverTooltip(screen, mgr, mouseX, mouseY, cameraX, cameraZ, mapScale, level);
+		if (!hover.isEmpty())
+			graphics.renderComponentTooltip(Minecraft.getInstance().font, hover, mouseX, mouseY);
+	}
+
+	private static List<Component> pickChainMapHoverTooltip(GuiMap screen, ChainMapManager mgr,
+		int mouseX, int mouseY, double cameraX, double cameraZ, double scale, Level level) {
+		double wx = cameraX + (mouseX - screen.width / 2.0) / scale;
+		double wz = cameraZ + (mouseY - screen.height / 2.0) / scale;
+		int bx = Mth.floor(wx);
+		int bz = Mth.floor(wz);
+
+		List<BlockPos> conveyorHits = new ArrayList<>();
+		for (BlockPos p : mgr.getConveyorPositions()) {
+			if (mouseInConveyorMarkerBlock(bx, bz, p))
+				conveyorHits.add(p);
+		}
+		for (BlockPos p : mgr.getUnloadedConveyorPositions()) {
+			if (mouseInConveyorMarkerBlock(bx, bz, p))
+				conveyorHits.add(p);
+		}
+		conveyorHits.sort(Comparator.<BlockPos>comparingLong(BlockPos::getY).thenComparingLong(BlockPos::getX));
+
+		List<ChainMapTooltips.FrogportEntry> frogportHits = new ArrayList<>();
+		for (ChainMapManager.ChainFrogport fp : mgr.getFrogports()) {
+			BlockPos p = fp.pos();
+			if (bx == p.getX() && bz == p.getZ())
+				frogportHits.add(new ChainMapTooltips.FrogportEntry(p, fp.addressFilter()));
+		}
+		frogportHits.sort(Comparator
+			.<ChainMapTooltips.FrogportEntry>comparingLong(f -> f.pos().getY())
+			.thenComparingLong(f -> f.pos().getX()));
+
+		if (!conveyorHits.isEmpty() || !frogportHits.isEmpty())
+			return buildCombinedChainMapTooltip(level, conveyorHits, frogportHits);
+
+		for (ChainMapManager.ChainEdge edge : mgr.getEdges()) {
+			if (chainEdgeNearMouse(screen, mouseX, mouseY, edge, cameraX, cameraZ, scale))
+				return ChainMapTooltips.chainEdgeHoverLines(level, edge.a(), edge.b());
+		}
+		for (ChainMapManager.ChainEdge edge : mgr.getUnloadedEdges()) {
+			if (chainEdgeNearMouse(screen, mouseX, mouseY, edge, cameraX, cameraZ, scale))
+				return ChainMapTooltips.chainEdgeHoverLines(level, edge.a(), edge.b());
+		}
+
+		return List.of();
+	}
+
+	private static boolean mouseInConveyorMarkerBlock(int bx, int bz, BlockPos p) {
+		return bx >= p.getX() - 1 && bx <= p.getX() + 1 && bz >= p.getZ() - 1 && bz <= p.getZ() + 1;
+	}
+
+	private static int screenMapX(GuiMap screen, double worldX, double cameraX, double scale) {
+		return Mth.floor(screen.width / 2.0 + (worldX - cameraX) * scale);
+	}
+
+	private static int screenMapY(GuiMap screen, double worldZ, double cameraZ, double scale) {
+		return Mth.floor(screen.height / 2.0 + (worldZ - cameraZ) * scale);
+	}
+
+	private static boolean chainEdgeNearMouse(GuiMap screen, int mouseX, int mouseY, ChainMapManager.ChainEdge edge,
+		double cameraX, double cameraZ, double scale) {
+		int x0 = screenMapX(screen, edge.a().getX() + 0.5, cameraX, scale);
+		int y0 = screenMapY(screen, edge.a().getZ() + 0.5, cameraZ, scale);
+		int x1 = screenMapX(screen, edge.b().getX() + 0.5, cameraX, scale);
+		int y1 = screenMapY(screen, edge.b().getZ() + 0.5, cameraZ, scale);
+		return ChainMapTooltips.isNearChainEdgeScreen(mouseX, mouseY, x0, y0, x1, y1);
+	}
+
+	private static List<Component> buildCombinedChainMapTooltip(Level level, List<BlockPos> conveyorHits,
+		List<ChainMapTooltips.FrogportEntry> frogportHits) {
+		List<Component> lines = new ArrayList<>();
+		if (!conveyorHits.isEmpty()) {
+			boolean firstConv = true;
+			for (BlockPos p : conveyorHits) {
+				if (!firstConv)
+					lines.add(Component.empty());
+				firstConv = false;
+				ChainConveyorBlockEntity ccbe = level != null && level.getBlockEntity(p) instanceof ChainConveyorBlockEntity c
+					? c
+					: null;
+				lines.addAll(ChainMapTooltips.conveyorHoverLines(p, ccbe));
+			}
+		}
+		if (!frogportHits.isEmpty()) {
+			if (!lines.isEmpty())
+				lines.add(Component.empty());
+			lines.addAll(ChainMapTooltips.frogportsHoverLines(frogportHits));
+		}
+		return lines;
+	}
+
+	// ── toggle widget ────────────────────────────────────────────────────
+
+	private static boolean renderToggleWidgetAndTooltip(GuiGraphics graphics, GuiMap screen,
+		int mouseX, int mouseY) {
+		renderToggleWidget(graphics);
+		if (!isToggleHovered(mouseX, mouseY))
+			return false;
+
+		graphics.renderTooltip(Minecraft.getInstance().font,
+			List.of(Component.translatable("spidermon.chain_map.toggle")),
+			java.util.Optional.empty(), mouseX, mouseY + 20);
+		return true;
+	}
+
+	private static void renderToggleWidget(GuiGraphics graphics) {
+		RenderSystem.enableBlend();
+		PoseStack pose = graphics.pose();
+		pose.pushPose();
+		pose.translate(0, 0, 300);
+		SpidermonGuiTextures.CHAINMAP_TOGGLE_PANEL.render(graphics, TOGGLE_X, TOGGLE_Y);
+		(overlayEnabled ? SpidermonGuiTextures.CHAINMAP_TOGGLE_ON : SpidermonGuiTextures.CHAINMAP_TOGGLE_OFF)
+			.render(graphics, TOGGLE_X + 18, TOGGLE_Y + 3);
+		pose.popPose();
+	}
+
+	private static boolean handleToggleClick(int mouseX, int mouseY) {
+		if (!isToggleHovered(mouseX, mouseY))
+			return false;
+		overlayEnabled = !overlayEnabled;
+		return true;
+	}
+
+	private static boolean isToggleHovered(int mouseX, int mouseY) {
+		if (mouseX < TOGGLE_X || mouseX >= TOGGLE_X + SpidermonGuiTextures.CHAINMAP_TOGGLE_PANEL.getWidth())
+			return false;
+		if (mouseY < TOGGLE_Y || mouseY >= TOGGLE_Y + SpidermonGuiTextures.CHAINMAP_TOGGLE_PANEL.getHeight())
+			return false;
+		return true;
+	}
+
+	// ── drawing ──────────────────────────────────────────────────────────
 
 	private static void drawEdges(ChainMapManager mgr) {
 		for (ChainMapManager.ChainEdge edge : mgr.getEdges()) {

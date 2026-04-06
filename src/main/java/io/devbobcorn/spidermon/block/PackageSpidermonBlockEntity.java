@@ -176,7 +176,7 @@ public class PackageSpidermonBlockEntity extends SmartBlockEntity implements Men
 	}
 
 	/**
-	 * Frogports attached to chain conveyors in the same network as this terminal's target conveyor.
+	 * Frogports attached to chain conveyors in the same network as this monitor's target conveyor.
 	 * Multiple entries at the same {@link BlockPos} are kept when they have distinct address filters
 	 * (e.g. both loop and travel maps reference the same port with different data).
 	 */
