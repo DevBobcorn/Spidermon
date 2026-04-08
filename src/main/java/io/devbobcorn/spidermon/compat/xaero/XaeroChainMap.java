@@ -12,9 +12,11 @@ import com.simibubi.create.content.kinetics.chainConveyor.ChainConveyorBlockEnti
 import com.simibubi.create.content.kinetics.chainConveyor.ChainConveyorPackage;
 
 import io.devbobcorn.spidermon.SpidermonMod;
-import io.devbobcorn.spidermon.client.ChainMapColors;
-import io.devbobcorn.spidermon.client.ChainMapTooltips;
 import io.devbobcorn.spidermon.client.SpidermonGuiTextures;
+import io.devbobcorn.spidermon.compat.ChainMapColors;
+import io.devbobcorn.spidermon.compat.ChainMapManager;
+import io.devbobcorn.spidermon.compat.ChainMapOverlay;
+import io.devbobcorn.spidermon.compat.ChainMapTooltips;
 import io.devbobcorn.spidermon.mixin.compat.xaero.XaeroGuiMapAccessor;
 
 import net.minecraft.client.Minecraft;

@@ -102,6 +102,15 @@ config="${mod_id}.mixins.json"
     ordering="NONE"
     side="CLIENT"
 
+[[dependencies.${mod_id}]]
+    modId="journeymap"
+    type="optional"
+    # Versions before 1.21.1-6.0.0-beta.46 do not contain the fullscreen render event Spidermon requires.
+    reason="Versions before 1.21.1-6.0.0-beta.46 do not contain the APIs Spidermon requires to work with JourneyMap."
+    versionRange="[1.21.1-6.0.0-beta.46,)"
+    ordering="NONE"
+    side="CLIENT"
+
 # Features are specific properties of the game environment, that you may want to declare you require. This example declares
 # that your mod requires GL version 3.2 or higher. Other features will be added. They are side aware so declaring this won't
 # stop your mod loading on the server for example.

@@ -1,4 +1,4 @@
-package io.devbobcorn.spidermon.client;
+package io.devbobcorn.spidermon.compat;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -19,7 +19,8 @@ import net.minecraft.world.level.Level;
 import net.neoforged.neoforge.items.ItemStackHandler;
 
 /**
- * Shared hover text for chain map UIs (package screen and Xaero world map overlay).
+ * Shared hover text for chain map UIs (package screen, Xaero world map overlay,
+ * and JourneyMap overlay).
  */
 public final class ChainMapTooltips {
 	private static final double CHAIN_HOVER_PX = 3.0;

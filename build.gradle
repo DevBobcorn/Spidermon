@@ -38,6 +38,13 @@ repositories {
     maven { url = 'https://maven.ithundxr.dev/snapshots' }
     maven { url = 'https://www.cursemaven.com' }
     maven { url = 'https://chocolateminecraft.com/maven' } // Xaero
+    maven {
+        url = 'https://jm.gserv.me/repository/maven-public' // JourneyMap
+        content {
+            includeGroup 'info.journeymap'
+            includeGroup 'mysticdrew'
+        }
+    }
 }
 
 base {
@@ -143,6 +150,12 @@ dependencies {
     compileOnly "curse.maven:xaeros-world-map-317780:${xaero_worldmap_curse_file}"
     localRuntime "xaero.lib:xaerolib-neoforge-1.21:${xaerolib_version}"
     localRuntime "curse.maven:xaeros-world-map-317780:${xaero_worldmap_curse_file}"
+
+    // JourneyMap (optional compat)
+    compileOnly("info.journeymap:journeymap-api-neoforge:${journeymap_api_version}") {
+        exclude(group: 'curse.maven') // Pulls in old version of JourneyMap for Forge
+    }
+    localRuntime "maven.modrinth:journeymap:${journeymap_version}"
 
     // Example optional mod dependency with JEI
     // The JEI API is declared for compile time use, while the full JEI artifact is used at runtime

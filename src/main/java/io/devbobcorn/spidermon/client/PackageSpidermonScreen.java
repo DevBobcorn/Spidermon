@@ -13,6 +13,8 @@ import com.simibubi.create.content.kinetics.chainConveyor.ChainConveyorPackage;
 import io.devbobcorn.spidermon.block.PackageSpidermonBlockEntity;
 import io.devbobcorn.spidermon.block.PackageSpidermonBlockEntity.NetworkFrogport;
 import io.devbobcorn.spidermon.block.PackageSpidermonMenu;
+import io.devbobcorn.spidermon.compat.ChainMapColors;
+import io.devbobcorn.spidermon.compat.ChainMapTooltips;
 
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphics;

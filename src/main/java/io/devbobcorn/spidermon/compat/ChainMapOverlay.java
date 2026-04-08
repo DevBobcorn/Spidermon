@@ -1,4 +1,4 @@
-package io.devbobcorn.spidermon.compat.xaero;
+package io.devbobcorn.spidermon.compat;
 
 import java.util.ArrayList;
 import java.util.List;

@@ -1,4 +1,4 @@
-package io.devbobcorn.spidermon.compat.xaero;
+package io.devbobcorn.spidermon.compat;
 
 import java.util.ArrayList;
 import java.util.HashSet;
@@ -25,7 +25,7 @@ import net.minecraft.world.level.chunk.status.ChunkStatus;
  * Client-side cache of chain conveyor network data, rebuilt periodically by
  * scanning loaded chunks. This avoids depending on a specific
  * {@link io.devbobcorn.spidermon.block.PackageSpidermonBlockEntity} to walk
- * the network, which wouldn't exist when viewing Xaero's World Map.
+ * the network, which wouldn't exist when viewing a world map.
  *
  * Conveyors in unloaded chunks are kept in a persistent cache so they remain
  * visible on the map (rendered in dimmer colors by the overlay).
@@ -205,7 +205,7 @@ public class ChainMapManager {
 		this.unloadedConveyorPositions = Set.copyOf(unloaded);
 		this.frogports = List.copyOf(newFrogports);
 
-		SpidermonMod.LOGGER.info("[Spidermon/Xaero] ChainMapManager rebuild: {} conveyors ({} cached unloaded), {} edges ({} unloaded), {} frogports | chunks checked={}, loaded={}, totalBEs={} (±{} around [{},{}])",
+		SpidermonMod.LOGGER.info("[Spidermon] ChainMapManager rebuild: {} conveyors ({} cached unloaded), {} edges ({} unloaded), {} frogports | chunks checked={}, loaded={}, totalBEs={} (±{} around [{},{}])",
 			found.size(), unloaded.size(), newEdges.size(), newUnloadedEdges.size(), newFrogports.size(),
 			chunksChecked, chunksLoaded, totalBlockEntities, renderDist, pcx, pcz);
 	}

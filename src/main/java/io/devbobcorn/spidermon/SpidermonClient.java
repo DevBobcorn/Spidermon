@@ -5,7 +5,8 @@ import io.devbobcorn.spidermon.client.PackageSpidermonRenderer;
 import io.devbobcorn.spidermon.client.PackageSpidermonScreen;
 import io.devbobcorn.spidermon.client.PackageSpidermonTargetSelectionHandler;
 import io.devbobcorn.spidermon.client.PackageSpidermonVisual;
-import io.devbobcorn.spidermon.compat.xaero.ChainMapManager;
+import io.devbobcorn.spidermon.compat.ChainMapManager;
+import io.devbobcorn.spidermon.compat.journeymap.JourneyChainMap;
 import io.devbobcorn.spidermon.compat.xaero.XaeroChainMap;
 
 import dev.engine_room.flywheel.lib.visualization.SimpleBlockEntityVisualizer;
@@ -28,9 +29,11 @@ import net.neoforged.neoforge.common.NeoForge;
 @Mod(value = SpidermonMod.MODID, dist = Dist.CLIENT)
 public class SpidermonClient {
     private static final boolean XAERO_LOADED = LoadingModList.get().getModFileById("xaeroworldmap") != null;
+    private static final boolean JOURNEYMAP_LOADED = LoadingModList.get().getModFileById("journeymap") != null;
 
     public SpidermonClient(IEventBus modEventBus, ModContainer container) {
         SpidermonMod.LOGGER.info("[Spidermon] Xaero's World Map detected: {}", XAERO_LOADED);
+        SpidermonMod.LOGGER.info("[Spidermon] JourneyMap detected: {}", JOURNEYMAP_LOADED);
 
         container.registerExtensionPoint(IConfigScreenFactory.class, ConfigurationScreen::new);
 
@@ -56,27 +59,39 @@ public class SpidermonClient {
     @SubscribeEvent
     public static void onClientTick(ClientTickEvent.Post event) {
         Minecraft mc = Minecraft.getInstance();
-        if (XAERO_LOADED)
+        if (XAERO_LOADED || JOURNEYMAP_LOADED)
             ChainMapManager.INSTANCE.ensureClientLevel(mc.level);
         if (mc.level == null || mc.player == null)
             return;
         PackageSpidermonTargetSelectionHandler.tick();
         if (XAERO_LOADED)
             tickXaeroChainMap();
+        if (JOURNEYMAP_LOADED)
+            tickJourneyChainMap();
     }
 
     private static void tickXaeroChainMap() {
         XaeroChainMap.tick();
     }
 
+    private static void tickJourneyChainMap() {
+        JourneyChainMap.tick();
+    }
+
     @SubscribeEvent
     public static void onMouseClick(InputEvent.MouseButton.Pre event) {
         if (XAERO_LOADED)
             handleXaeroMouseClick(event);
+        if (JOURNEYMAP_LOADED)
+            handleJourneyMouseClick(event);
     }
 
     private static void handleXaeroMouseClick(InputEvent.MouseButton.Pre event) {
         XaeroChainMap.mouseClick(event);
+    }
+
+    private static void handleJourneyMouseClick(InputEvent.MouseButton.Pre event) {
+        JourneyChainMap.mouseClick(event);
     }
 
     static void registerScreens(RegisterMenuScreensEvent event) {

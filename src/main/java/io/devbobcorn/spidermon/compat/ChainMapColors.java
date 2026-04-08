@@ -1,9 +1,10 @@
-package io.devbobcorn.spidermon.client;
+package io.devbobcorn.spidermon.compat;
 
 /**
- * Shared color constants for chain conveyor map rendering, used by both
- * {@link PackageSpidermonScreen} and
- * {@link io.devbobcorn.spidermon.compat.xaero.XaeroChainMap}.
+ * Shared color constants for chain conveyor map rendering, used by
+ * {@link io.devbobcorn.spidermon.client.PackageSpidermonScreen},
+ * {@link io.devbobcorn.spidermon.compat.xaero.XaeroChainMap}, and
+ * {@link io.devbobcorn.spidermon.compat.journeymap.JourneyChainMap}.
  */
 public final class ChainMapColors {
 	public static final int EDGE_COLOR = 0xFF6eb8d4;
