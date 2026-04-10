@@ -9,8 +9,13 @@ import io.devbobcorn.spidermon.compat.ChainMapManager;
 import io.devbobcorn.spidermon.compat.journeymap.JourneyChainMap;
 import io.devbobcorn.spidermon.compat.xaero.XaeroChainMap;
 
+import com.mojang.blaze3d.vertex.PoseStack;
+import com.mojang.math.Axis;
+
 import dev.engine_room.flywheel.lib.visualization.SimpleBlockEntityVisualizer;
 import net.minecraft.client.Minecraft;
+import net.minecraft.client.renderer.MultiBufferSource;
+import net.minecraft.world.phys.Vec3;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.bus.api.IEventBus;
 import net.neoforged.bus.api.SubscribeEvent;
@@ -22,6 +27,7 @@ import net.neoforged.neoforge.client.event.ClientTickEvent;
 import net.neoforged.neoforge.client.event.EntityRenderersEvent;
 import net.neoforged.neoforge.client.event.InputEvent;
 import net.neoforged.neoforge.client.event.RegisterMenuScreensEvent;
+import net.neoforged.neoforge.client.event.RenderLevelStageEvent;
 import net.neoforged.neoforge.client.gui.ConfigurationScreen;
 import net.neoforged.neoforge.client.gui.IConfigScreenFactory;
 import net.neoforged.neoforge.common.NeoForge;
@@ -54,6 +60,29 @@ public class SpidermonClient {
                 .factory(PackageSpidermonVisual::new)
                 .skipVanillaRender(be -> true)
                 .apply();
+    }
+
+    @SubscribeEvent
+    public static void onRenderLevelStage(RenderLevelStageEvent event) {
+        if (event.getStage() != RenderLevelStageEvent.Stage.AFTER_SOLID_BLOCKS)
+            return;
+        Minecraft mc = Minecraft.getInstance();
+        if (mc.level == null)
+            return;
+        // Do not use event.getPoseStack(): it carries per-section transforms. Build a clean view stack like
+        // LevelRenderer (pitch, yaw+180, then translate -camera) and draw in world space.
+        PoseStack poseStack = new PoseStack();
+        poseStack.pushPose();
+        var camera = event.getCamera();
+        poseStack.mulPose(Axis.XP.rotationDegrees(camera.getXRot()));
+        poseStack.mulPose(Axis.YP.rotationDegrees(camera.getYRot() + 180.0F));
+        Vec3 cam = camera.getPosition();
+        poseStack.translate(-cam.x, -cam.y, -cam.z);
+        float partialTick = event.getPartialTick().getGameTimeDeltaPartialTick(true);
+        MultiBufferSource.BufferSource buffer = mc.renderBuffers().bufferSource();
+        PackageSpidermonTargetSelectionHandler.renderPackageSpidermonScreenChainMeshesWorld(mc, poseStack, buffer,
+            partialTick);
+        buffer.endBatch(PackageSpidermonTargetSelectionHandler.chainSegmentRenderType());
     }
 
     @SubscribeEvent

@@ -12,6 +12,7 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.RenderType;
 import net.minecraft.client.renderer.blockentity.BlockEntityRendererProvider.Context;
+import net.minecraft.world.phys.Vec3;
 
 public class PackageSpidermonRenderer extends SmartBlockEntityRenderer<PackageSpidermonBlockEntity> {
 
@@ -39,7 +40,8 @@ public class PackageSpidermonRenderer extends SmartBlockEntityRenderer<PackageSp
 			.overlay(overlay)
 			.renderInto(ms, buffer.getBuffer(RenderType.cutoutMipped()));
 
-		PackageSpidermonTargetSelectionHandler.renderPackageSpidermonScreenChainParticles(Minecraft.getInstance(),
-			blockEntity, partialTicks);
+		Vec3 origin = Vec3.atLowerCornerOf(blockEntity.getBlockPos());
+		PackageSpidermonTargetSelectionHandler.renderPackageSpidermonScreenChainMesh(Minecraft.getInstance(),
+			blockEntity, partialTicks, ms, buffer, light, overlay, origin);
 	}
 }

@@ -14,7 +14,6 @@ import dev.engine_room.flywheel.lib.instance.TransformedInstance;
 import dev.engine_room.flywheel.lib.model.Models;
 import dev.engine_room.flywheel.lib.visual.AbstractBlockEntityVisual;
 import dev.engine_room.flywheel.lib.visual.SimpleDynamicVisual;
-import net.minecraft.client.Minecraft;
 
 public class PackageSpidermonVisual extends AbstractBlockEntityVisual<PackageSpidermonBlockEntity> implements SimpleDynamicVisual {
 	private TransformedInstance body;
@@ -36,10 +35,7 @@ public class PackageSpidermonVisual extends AbstractBlockEntityVisual<PackageSpi
 	@Override
 	public void beginFrame(Context ctx) {
 		animate(ctx.partialTick());
-		Minecraft mc = Minecraft.getInstance();
-		if (mc != null)
-			PackageSpidermonTargetSelectionHandler.renderPackageSpidermonScreenChainParticles(mc, blockEntity,
-				ctx.partialTick());
+		// Chain string mesh is drawn from RenderLevelStageEvent (vanilla BER is skipped when Flywheel is active).
 	}
 
 	private void animate(float partialTicks) {
