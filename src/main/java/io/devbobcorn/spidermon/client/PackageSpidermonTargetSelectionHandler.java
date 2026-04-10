@@ -42,7 +42,7 @@ import net.neoforged.neoforge.network.PacketDistributor;
 public class PackageSpidermonTargetSelectionHandler {
 
 	/** Debug: ignore menu/animation gates and use full chain length (set {@code false} before release). */
-	private static final boolean DEBUG_ALWAYS_RENDER_SCREEN_CHAIN = true;
+	private static final boolean DEBUG_ALWAYS_RENDER_SCREEN_CHAIN = false;
 
 	/** Visual for the chain segment (end rod along +Z in model space before stretch). */
 	public static final BlockState CHAIN_SEGMENT_VISUAL_STATE = Blocks.END_ROD.defaultBlockState()
