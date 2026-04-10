@@ -25,8 +25,8 @@ import net.neoforged.neoforge.items.ItemStackHandler;
 public final class ChainMapTooltips {
 	private static final double CHAIN_HOVER_PX = 3.0;
 	private static final double CHAIN_HOVER_PX_SQ = CHAIN_HOVER_PX * CHAIN_HOVER_PX;
-	/** Spaces before looping-package destination and content lines (under the package title). */
-	private static final String LOOPING_DETAIL_INDENT = "    ";
+	/** Spaces before package content lines (under the package item name). */
+	private static final String PACKAGE_DETAIL_INDENT = "  ";
 
 	private ChainMapTooltips() {
 	}
@@ -179,7 +179,7 @@ public final class ChainMapTooltips {
 				continue;
 			}
 			visibleNames++;
-			lines.add(Component.literal(LOOPING_DETAIL_INDENT).append(
+			lines.add(Component.literal(PACKAGE_DETAIL_INDENT).append(
 				slotStack.getHoverName()
 					.copy()
 					.append(" x")
@@ -187,7 +187,7 @@ public final class ChainMapTooltips {
 					.withStyle(ChatFormatting.GRAY)));
 		}
 		if (skippedNames > 0)
-			lines.add(Component.literal(LOOPING_DETAIL_INDENT).append(
+			lines.add(Component.literal(PACKAGE_DETAIL_INDENT).append(
 				Component.translatable("container.shulkerBox.more", skippedNames)
 					.withStyle(ChatFormatting.ITALIC, ChatFormatting.GRAY)));
 	}

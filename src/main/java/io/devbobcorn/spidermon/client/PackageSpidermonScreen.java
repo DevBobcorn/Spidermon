@@ -15,21 +15,38 @@ import io.devbobcorn.spidermon.block.PackageSpidermonBlockEntity.NetworkFrogport
 import io.devbobcorn.spidermon.block.PackageSpidermonMenu;
 import io.devbobcorn.spidermon.compat.ChainMapColors;
 import io.devbobcorn.spidermon.compat.ChainMapTooltips;
+import io.devbobcorn.spidermon.SpidermonMod;
 
+import net.createmod.catnip.gui.element.GuiGameElement;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
 import net.minecraft.client.resources.language.I18n;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.util.Mth;
 import net.minecraft.world.entity.player.Inventory;
+import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.Vec3;
 
 public class PackageSpidermonScreen extends AbstractContainerScreen<PackageSpidermonMenu> {
 
-	private static final int BG_COLOR = 0xCC101010;
+	private static final int MONITOR_TEXTURE_WIDTH = 512;
+	private static final int MONITOR_TEXTURE_HEIGHT = 256;
+	/** Pixels to shift the whole GUI left after centering ({@link #init}). */
+	private static final int GUI_LEFT_SHIFT = 20;
+	/** Background is drawn this many pixels wider than {@link #imageWidth} (same height). */
+	private static final int MONITOR_BLIT_WIDTH_EXTRA = 20;
+
+	/**
+	 * Background texture file ({@value #MONITOR_TEXTURE_WIDTH}×{@value #MONITOR_TEXTURE_HEIGHT} px), drawn scaled to
+	 * {@code imageWidth + MONITOR_BLIT_WIDTH_EXTRA}×{@code imageHeight} on screen.
+	 */
+	private static final ResourceLocation MONITOR_TEXTURE =
+		ResourceLocation.fromNamespaceAndPath(SpidermonMod.MODID, "textures/gui/monitor.png");
+
 	private static final int MAP_BG_COLOR = 0xFF1a1a22;
 	private static final int BORDER_COLOR = 0xFF9ede73;
 	private static final int TITLE_COLOR = 0x9ede73;
@@ -69,15 +86,22 @@ public class PackageSpidermonScreen extends AbstractContainerScreen<PackageSpide
 	private int pixelsPerBlock = 8;
 	private boolean draggingMap;
 
+	private final ItemStack spidermonIcon;
+
 	public PackageSpidermonScreen(PackageSpidermonMenu menu, Inventory playerInventory, Component title) {
 		super(menu, playerInventory, title);
 		this.imageWidth = 280;
 		this.imageHeight = 200;
+		PackageSpidermonBlockEntity be = menu.contentHolder;
+		this.spidermonIcon = be != null
+			? new ItemStack(be.getBlockState().getBlock().asItem())
+			: new ItemStack(SpidermonMod.PACKAGE_SPIDERMON_BLOCK.get().asItem());
 	}
 
 	@Override
 	protected void init() {
 		super.init();
+		leftPos -= GUI_LEFT_SHIFT;
 		PackageSpidermonBlockEntity be = menu.contentHolder;
 		if (be != null) {
 			connectedConveyors = be.getConnectedChainConveyors();
@@ -257,8 +281,9 @@ public class PackageSpidermonScreen extends AbstractContainerScreen<PackageSpide
 
 	@Override
 	protected void renderBg(GuiGraphics guiGraphics, float partialTick, int mouseX, int mouseY) {
-		guiGraphics.fill(leftPos, topPos, leftPos + imageWidth, topPos + imageHeight, BG_COLOR);
-		guiGraphics.renderOutline(leftPos, topPos, imageWidth, imageHeight, BORDER_COLOR);
+		int blitW = imageWidth + MONITOR_BLIT_WIDTH_EXTRA;
+		guiGraphics.blit(MONITOR_TEXTURE, leftPos, topPos, 0, 0, blitW, imageHeight, MONITOR_TEXTURE_WIDTH,
+			MONITOR_TEXTURE_HEIGHT);
 
 		int ml = mapLeft();
 		int mt = mapTop();
@@ -357,6 +382,9 @@ public class PackageSpidermonScreen extends AbstractContainerScreen<PackageSpide
 		}
 
 		guiGraphics.disableScissor();
+
+		GuiGameElement.of(spidermonIcon).<GuiGameElement.GuiRenderBuilder>at(
+			leftPos + blitW - 4, topPos + imageHeight - 56, -200).scale(4).render(guiGraphics);
 	}
 
 	/**
