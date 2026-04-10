@@ -7,6 +7,7 @@ import io.devbobcorn.spidermon.SpidermonMod;
 import io.devbobcorn.spidermon.block.PackageSpidermonBlockEntity;
 import io.devbobcorn.spidermon.network.SpidermonPlacementPacket;
 
+import org.joml.Matrix4f;
 import org.joml.Quaternionf;
 import org.joml.Vector3f;
 
@@ -19,19 +20,15 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.client.renderer.ItemBlockRenderTypes;
-import net.minecraft.client.renderer.LevelRenderer;
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.RenderType;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
-import net.minecraft.core.SectionPos;
 import net.minecraft.core.particles.DustParticleOptions;
 import net.minecraft.network.chat.Component;
-import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.DirectionalBlock;
 import net.minecraft.world.level.block.state.BlockState;
-import net.minecraft.world.level.chunk.LevelChunk;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.HitResult;
@@ -45,10 +42,10 @@ import net.neoforged.neoforge.network.PacketDistributor;
 public class PackageSpidermonTargetSelectionHandler {
 
 	/** Debug: ignore menu/animation gates and use full chain length (set {@code false} before release). */
-	private static final boolean DEBUG_ALWAYS_RENDER_SCREEN_CHAIN = false;
+	private static final boolean DEBUG_ALWAYS_RENDER_SCREEN_CHAIN = true;
 
-	/** Visual for the chain segment. */
-	private static final BlockState CHAIN_SEGMENT_VISUAL_STATE = Blocks.END_ROD.defaultBlockState()
+	/** Visual for the chain segment (end rod along +Z in model space before stretch). */
+	public static final BlockState CHAIN_SEGMENT_VISUAL_STATE = Blocks.END_ROD.defaultBlockState()
 		.setValue(DirectionalBlock.FACING, Direction.SOUTH);
 
 	@SuppressWarnings("deprecation")
@@ -176,14 +173,43 @@ public class PackageSpidermonTargetSelectionHandler {
 	}
 
 	/**
-	 * Renders a tripwire (string) block mesh from the block to the chain point when any player has the
-	 * Spidermon menu open ({@link PackageSpidermonBlockEntity#getMenuOpenCount()}), or while the open
-	 * animation is still closing. Length follows {@link PackageSpidermonBlockEntity#manualOpenAnimationProgress}
-	 * (scaled along the segment axis).
+	 * Transform from block min corner to stretched end-rod geometry. {@code source}, {@code target}, and
+	 * {@code blockCornerMin} must use the same coordinate system (world, or Flywheel origin-shifted space).
 	 *
-	 * @param originOffset subtract from world positions before translating: block min corner when the stack is
-	 *                     already offset to that block (vanilla BER); {@link Vec3#ZERO} when the stack’s model
-	 *                     transform is the level model-view matrix (see {@code RenderLevelStageEvent} setup).
+	 * @return {@code false} if nothing should be drawn (zero length segment).
+	 */
+	public static boolean chainSegmentLocalMatrix(Matrix4f out, Vec3 blockCornerMin, Vec3 source, Vec3 target,
+		float extent) {
+		Vec3 end = source.lerp(target, extent);
+		Vec3 relSource = source.subtract(blockCornerMin);
+		Vec3 relEnd = end.subtract(blockCornerMin);
+		Vec3 dir = relEnd.subtract(relSource);
+		double len = dir.length();
+		if (len < 1e-4)
+			return false;
+		dir = dir.scale(1.0 / len);
+
+		Vec3 relMid = new Vec3(
+			(relSource.x + relEnd.x) * 0.5,
+			(relSource.y + relEnd.y) * 0.5,
+			(relSource.z + relEnd.z) * 0.5);
+
+		var forward = new Vector3f(0f, 0f, 1f);
+		var along = new Vector3f((float) dir.x, (float) dir.y, (float) dir.z);
+		Quaternionf align = new Quaternionf().rotationTo(forward, along);
+
+		out.identity()
+			.translate((float) relMid.x, (float) relMid.y, (float) relMid.z)
+			.rotate(align)
+			.translate(-0.5f, -0.5f, 0f)
+			.scale(1f, 1f, (float) len)
+			.translate(0f, 0f, -0.5f);
+		return true;
+	}
+
+	/**
+	 * Renders the chain mesh from the block entity renderer. {@code originOffset} must match the block min corner
+	 * in the same space as world positions (typically {@link Vec3#atLowerCornerOf(BlockPos)}).
 	 */
 	public static void renderPackageSpidermonScreenChainMesh(Minecraft mc, PackageSpidermonBlockEntity be,
 		float partialTick, PoseStack poseStack, MultiBufferSource buffer, int light, int overlay, Vec3 originOffset) {
@@ -194,37 +220,18 @@ public class PackageSpidermonTargetSelectionHandler {
 		Vec3 source = Vec3.atBottomCenterOf(pos);
 		Vec3 target = be.getExactTargetLocation();
 		float extent = screenChainExtent(be, partialTick);
-		Vec3 end = source.lerp(target, extent);
 
-		Vec3 relSource = source.subtract(originOffset);
-		Vec3 relEnd = end.subtract(originOffset);
-		Vec3 dir = relEnd.subtract(relSource);
-		double len = dir.length();
-		if (len < 1e-4)
+		Matrix4f local = new Matrix4f();
+		if (!chainSegmentLocalMatrix(local, originOffset, source, target, extent))
 			return;
-		dir = dir.scale(1.0 / len);
-
-		Vec3 relMid = new Vec3(
-			(relSource.x + relEnd.x) * 0.5,
-			(relSource.y + relEnd.y) * 0.5,
-			(relSource.z + relEnd.z) * 0.5);
 
 		poseStack.pushPose();
-		poseStack.translate(relMid.x, relMid.y, relMid.z);
-		// Block model is stretched along +Z; align that axis to the segment in world space.
-		var forward = new Vector3f(0f, 0f, 1f);
-		var along = new Vector3f((float) dir.x, (float) dir.y, (float) dir.z);
-		Quaternionf align = new Quaternionf().rotationTo(forward, along);
-		poseStack.mulPose(align);
-		// Block-local offset (0–1 model space; applied before Z stretch).
-		poseStack.translate(-0.5f, -0.5f, 0f);
-		poseStack.scale(1f, 1f, (float) len);
-		poseStack.translate(0f, 0f, -0.5f);
-
+		poseStack.last()
+			.pose()
+			.mul(local);
 		mc.getBlockRenderer()
 			.renderSingleBlock(CHAIN_SEGMENT_VISUAL_STATE, poseStack, buffer, light, overlay, ModelData.EMPTY,
 				chainSegmentRenderType());
-
 		poseStack.popPose();
 	}
 
@@ -241,57 +248,10 @@ public class PackageSpidermonTargetSelectionHandler {
 		return be.getMenuOpenCount() > 0 || extent > 1e-4f;
 	}
 
-	private static float screenChainExtent(PackageSpidermonBlockEntity be, float partialTick) {
+	static float screenChainExtent(PackageSpidermonBlockEntity be, float partialTick) {
 		if (DEBUG_ALWAYS_RENDER_SCREEN_CHAIN)
 			return 1f;
 		return be.manualOpenAnimationProgress.getValue(partialTick);
-	}
-
-	/**
-	 * Flywheel skips vanilla BER; draw chain meshes for loaded spidermons after the camera transform is applied.
-	 */
-	public static void renderPackageSpidermonScreenChainMeshesWorld(Minecraft mc, PoseStack poseStack,
-		MultiBufferSource buffer, float partialTick) {
-		if (!(mc.level instanceof ClientLevel clientLevel) || mc.player == null)
-			return;
-		int viewDist = mc.options.getEffectiveRenderDistance();
-		int pcx = SectionPos.blockToSectionCoord(mc.player.getBlockX());
-		int pcz = SectionPos.blockToSectionCoord(mc.player.getBlockZ());
-
-		for (int cx = pcx - viewDist; cx <= pcx + viewDist; cx++) {
-			for (int cz = pcz - viewDist; cz <= pcz + viewDist; cz++) {
-				if (!clientLevel.hasChunk(cx, cz))
-					continue;
-				LevelChunk chunk = clientLevel.getChunk(cx, cz);
-				for (var blockEntity : chunk.getBlockEntities()
-					.values()) {
-					if (!(blockEntity instanceof PackageSpidermonBlockEntity be))
-						continue;
-					if (!shouldRenderPackageSpidermonScreenChain(be, partialTick))
-						continue;
-					Vec3 mid = screenChainMidpointWorld(be, partialTick);
-					int light = sampleChainLight(clientLevel, mid);
-					renderPackageSpidermonScreenChainMesh(mc, be, partialTick, poseStack, buffer, light,
-						net.minecraft.client.renderer.texture.OverlayTexture.NO_OVERLAY, Vec3.ZERO);
-				}
-			}
-		}
-	}
-
-	private static Vec3 screenChainMidpointWorld(PackageSpidermonBlockEntity be, float partialTick) {
-		BlockPos pos = be.getBlockPos();
-		Vec3 source = Vec3.atBottomCenterOf(pos);
-		Vec3 target = be.getExactTargetLocation();
-		float extent = screenChainExtent(be, partialTick);
-		Vec3 end = source.lerp(target, extent);
-		return new Vec3(
-			(source.x + end.x) * 0.5,
-			(source.y + end.y) * 0.5,
-			(source.z + end.z) * 0.5);
-	}
-
-	private static int sampleChainLight(Level level, Vec3 midWorld) {
-		return LevelRenderer.getLightColor(level, BlockPos.containing(midWorld));
 	}
 
 	public static String validateDiff(Vec3 target, BlockPos placedPos) {
