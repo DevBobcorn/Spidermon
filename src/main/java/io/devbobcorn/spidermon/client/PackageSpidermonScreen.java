@@ -48,8 +48,8 @@ public class PackageSpidermonScreen extends AbstractContainerScreen<PackageSpide
 		ResourceLocation.fromNamespaceAndPath(SpidermonMod.MODID, "textures/gui/monitor.png");
 
 	private static final int MAP_BG_COLOR = 0xFF1a1a22;
-	private static final int BORDER_COLOR = 0xFF9ede73;
-	private static final int TITLE_COLOR = 0x9ede73;
+	private static final int BORDER_COLOR = 0xFF810000;
+	private static final int TITLE_COLOR = 0xff0000;
 	private static final int HINT_COLOR = 0x888888;
 
 	private static final int EDGE_COLOR = ChainMapColors.EDGE_COLOR;
